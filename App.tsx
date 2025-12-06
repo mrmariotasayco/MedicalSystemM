@@ -289,8 +289,56 @@ export function App() {
 
   const handleDeleteLabResult = async (id: string) => {
       try {
+          // Identify result before deleting to get Name/Date for Bed Sync
+          const resultToDelete = patientResults.find(r => r.id === id);
+
+          // 1. Delete from DB and Local State
           await dbService.deleteLabResult(id);
           setPatientResults(prev => prev.filter(r => r.id !== id));
+
+          // 2. SYNC: Remove from Bed snapshot if patient is hospitalized
+          if (resultToDelete && selectedPatient && selectedPatient.bedId) {
+             const currentBed = beds.find(b => b.id === selectedPatient.bedId);
+             
+             if (currentBed && currentBed.labSections) {
+                 // Deep copy sections to modify safely
+                 const updatedSections = currentBed.labSections.map(section => ({
+                     ...section,
+                     metrics: [...section.metrics]
+                 }));
+
+                 let bedModified = false;
+
+                 // Logic: Find section by date, remove metric by name
+                 updatedSections.forEach((section, sIdx) => {
+                     // Simple date comparison (YYYY-MM-DD)
+                     if (section.date === resultToDelete.date) {
+                         const initialCount = section.metrics.length;
+                         // Filter out the metric that matches the deleted test name
+                         section.metrics = section.metrics.filter(m => m.name !== resultToDelete.testName);
+                         
+                         if (section.metrics.length !== initialCount) {
+                             bedModified = true;
+                         }
+                     }
+                 });
+
+                 // Clean up empty sections if needed
+                 const finalSections = updatedSections.filter(s => s.metrics.length > 0);
+                 if (finalSections.length !== updatedSections.length) {
+                     bedModified = true;
+                 }
+
+                 if (bedModified) {
+                     // We update the bed directly in DB to keep snapshot in sync
+                     const updatedBed = { ...currentBed, labSections: finalSections };
+                     
+                     // Re-use existing update handler to sync State and DB
+                     await handleUpdateBed(updatedBed);
+                 }
+             }
+          }
+
       } catch (error) {
           alert("Error al eliminar resultado.");
       }
