@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Patient, BedData, CarePlanData } from '../types';
-import { Search, UserPlus, Eye, Edit2, Trash2, Users, AlertTriangle, Bed, PlusCircle, X, Droplet, Calendar, Activity, Save } from 'lucide-react';
+import { Search, UserPlus, Eye, Edit2, Trash2, Users, AlertTriangle, Bed, PlusCircle, X, Droplet, Calendar, Activity, Save, MapPin } from 'lucide-react';
 
 interface PatientListProps {
   patients: Patient[];
@@ -30,7 +30,7 @@ export const PatientList: React.FC<PatientListProps> = ({
   const [assigningPatient, setAssigningPatient] = useState<Patient | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
   
-  // New Care Plan Form State within Assignment (Removed Hardware Fields)
+  // New Care Plan Form State within Assignment
   const [carePlanForm, setCarePlanForm] = useState<CarePlanData>({
       hgt1400: '', hgt2200: '', hgt0600: '',
       catheterType: '', needleSize: '', nasogastricSonde: '', foleySonde: '', oxygenMode: '',
@@ -70,15 +70,11 @@ export const PatientList: React.FC<PatientListProps> = ({
 
   const finalizeAssignment = () => {
       if (assigningPatient && selectedBedId) {
-          // Construct the payload including the care plan
           const bedPayload: Partial<BedData> = {
               id: selectedBedId,
               carePlan: carePlanForm
-              // The parent App.tsx handles pulling the diagnosis/summary from patient history
           };
           onAssignBed(assigningPatient, bedPayload);
-          
-          // Reset
           setAssigningPatient(null);
           setSelectedBedId(null);
           setCarePlanForm({
@@ -154,10 +150,10 @@ export const PatientList: React.FC<PatientListProps> = ({
                   F. Nacimiento
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Contacto
+                  Pabellón
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                  Ubicación
+                  Cama
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Acciones
@@ -166,7 +162,10 @@ export const PatientList: React.FC<PatientListProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-slate-200">
               {filteredPatients.length > 0 ? (
-                filteredPatients.map((patient) => (
+                filteredPatients.map((patient) => {
+                  const assignedBedInfo = beds.find(b => b.id === patient.bedId);
+                  
+                  return (
                   <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -193,13 +192,22 @@ export const PatientList: React.FC<PatientListProps> = ({
                             {patient.dob}
                         </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {patient.contact}
-                    </td>
+                    {/* New Pavilion Column */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                        {patient.bedId ? (
-                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                <Bed size={12} className="mr-1" /> Cama {patient.bedId}
+                        {assignedBedInfo ? (
+                             <div className="flex items-center text-sm text-slate-600">
+                                <MapPin size={14} className="mr-1.5 text-slate-400" />
+                                <span className="font-medium">{assignedBedInfo.pabellon || 'General'}</span>
+                             </div>
+                        ) : (
+                            <span className="text-xs text-slate-400 italic">No asignado</span>
+                        )}
+                    </td>
+                    {/* Bed Column */}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        {assignedBedInfo ? (
+                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                <Bed size={12} className="mr-1" /> {assignedBedInfo.bedLabel || `Cama ${patient.bedId}`}
                             </span>
                         ) : (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
@@ -241,7 +249,7 @@ export const PatientList: React.FC<PatientListProps> = ({
                       </button>
                     </td>
                   </tr>
-                ))
+                )})
               ) : (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
