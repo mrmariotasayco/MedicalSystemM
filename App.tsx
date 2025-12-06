@@ -8,7 +8,7 @@ import { PatientList } from './components/PatientList';
 import { PatientForm } from './components/PatientForm';
 import { BedManagement } from './components/BedManagement';
 import { UserProfileModal } from './components/UserProfileModal'; 
-import { Patient, EvolutionNote, LabResult, ViewState, Appointment, BedData, DischargedPatient, LabSection, Prescription } from './types';
+import { Patient, EvolutionNote, LabResult, ViewState, Appointment, BedData, DischargedPatient, LabSection, Prescription, LabMetric } from './types';
 import { Menu, LogOut, Stethoscope, Loader2, Settings, X } from 'lucide-react';
 import { UserProfile, signOut, getCurrentSession, updateUserProfile, deleteUserAccount } from './services/authService';
 
@@ -219,8 +219,56 @@ export function App() {
   const handleAddLabResult = async (newResult: LabResult) => {
      if (!selectedPatient) return;
      try {
+         // 1. Create in lab_results table (Permanent Record)
          const created = await dbService.createLabResult(newResult, selectedPatient.id);
-         if (created) {
+         
+         let bedSyncTriggeredRefresh = false;
+
+         // 2. SYNC: If Patient is Hospitalized, add to Bed's "Recent Labs" section
+         if (selectedPatient.bedId) {
+            const currentBed = beds.find(b => b.id === selectedPatient.bedId);
+            if (currentBed) {
+                // Convert LabResult to Bed LabMetric
+                const newMetric: LabMetric = {
+                    name: newResult.testName,
+                    value: newResult.resultType === 'quantitative' 
+                        ? `${newResult.value} ${newResult.unit || ''}`.trim() 
+                        : newResult.textValue || '',
+                    type: newResult.resultType,
+                    category: newResult.category,
+                    isAbnormal: newResult.isAbnormal,
+                    reference: newResult.referenceRange
+                };
+
+                // Clone existing sections to avoid mutation
+                const updatedSections = [...(currentBed.labSections || [])];
+                const today = new Date().toISOString().split('T')[0];
+                
+                // Check if we have a section for today or generic "Resultados Recientes"
+                const sectionIndex = updatedSections.findIndex(s => s.date === today || s.title === 'Resultados del Día');
+
+                if (sectionIndex >= 0) {
+                    updatedSections[sectionIndex].metrics.push(newMetric);
+                } else {
+                    // Create new section
+                    updatedSections.unshift({
+                        title: 'Resultados del Día',
+                        date: today,
+                        metrics: [newMetric]
+                    });
+                }
+
+                // Update Bed in DB
+                const updatedBed = { ...currentBed, labSections: updatedSections };
+                await handleUpdateBed(updatedBed);
+                
+                // Flag that the bed update will have triggered a reload of results
+                bedSyncTriggeredRefresh = true;
+            }
+         }
+
+         // 3. Update Local State (Only if we didn't already refresh via bed sync)
+         if (created && !bedSyncTriggeredRefresh) {
              setPatientResults(prev => [created, ...prev]);
          }
      } catch (error) {
@@ -255,8 +303,23 @@ export function App() {
         if (created) {
             setPatientAppointments(prev => [...prev, created]);
         }
-    } catch (error) {
-        alert("Error al agendar cita.");
+    } catch (error: any) {
+        console.error("Error creating appointment:", error);
+        // Robust error handling to extract message from object
+        let msg = "Error desconocido";
+        if (error?.message) {
+            msg = error.message;
+        } else if (typeof error === 'string') {
+            msg = error;
+        } else if (error && typeof error === 'object') {
+            // Try to stringify if it's an object without message property
+            try {
+                msg = JSON.stringify(error);
+            } catch (e) {
+                msg = "Detalles del error no disponibles";
+            }
+        }
+        alert(`Error al agendar cita: ${msg}`);
     }
   };
 
@@ -381,6 +444,7 @@ export function App() {
             setBeds(prev => prev.map(b => b.id === result.id ? result : b));
         }
     } catch (error) {
+        console.error(error);
         alert("Error al guardar datos de la cama.");
     }
   };
