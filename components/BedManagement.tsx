@@ -335,7 +335,8 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                     <h4 className="text-lg font-bold">Laboratorio Reciente</h4>
                 </div>
                 <div className="space-y-4">
-                    {data.labSections?.map((section, idx) => (
+                    {data.labSections && data.labSections.length > 0 ? (
+                        data.labSections.map((section, idx) => (
                         <div key={idx} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                             <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
                                 <span className="font-bold text-slate-700 text-sm">{section.title}</span>
@@ -352,7 +353,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                 <div className="col-span-2 text-right">Estado</div>
                             </div>
                             <div className="p-0">
-                                {section.metrics.map((metric, mIdx) => (
+                                {section.metrics?.map((metric, mIdx) => (
                                     <div key={mIdx} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors items-center">
                                         <div className="col-span-3">
                                             <div className="text-xs text-slate-700 font-bold">{metric.name}</div>
@@ -393,7 +394,10 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                 ))}
                             </div>
                         </div>
-                    )) || <div className="text-slate-400 italic">Sin resultados registrados.</div>}
+                    ))
+                    ) : (
+                        <div className="text-slate-400 italic">Sin resultados registrados.</div>
+                    )}
                 </div>
             </section>
         </div>
@@ -402,6 +406,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
 
   return (
     <div className="min-h-screen bg-slate-50 animate-fade-in p-6">
+      {/* Header and Grid remain same as previous... */}
       <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center space-x-4">
           <button onClick={onBack} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
