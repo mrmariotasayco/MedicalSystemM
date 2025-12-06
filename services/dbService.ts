@@ -27,6 +27,10 @@ const mapPatientFromDB = (data: any): Patient => ({
 const mapBedFromDB = (data: any): BedData => ({
     id: data.id,
     status: data.status,
+    // Map new columns
+    pabellon: data.pabellon || 'General',
+    bedLabel: data.bed_label || `Cama ${data.id}`,
+    
     patientId: data.patient_id,
     patientName: data.patients?.full_name || data.patient_name_snapshot, 
     condition: data.diagnosis,
