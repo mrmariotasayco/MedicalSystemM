@@ -415,7 +415,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
     setNewAppt({
         date: new Date().toISOString().split('T')[0],
         time: '09:00',
-        doctor: '',
+        doctor: doctorProfile?.fullName || '',
         reason: '',
         status: 'Programada',
         location: 'Consultorio Principal'
@@ -442,36 +442,63 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
 
   const handleApptSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Ensure all required fields are present and valid
     if (newAppt.date && newAppt.time && newAppt.doctor && newAppt.reason) {
+        const appointmentData: Appointment = {
+            id: editingApptId || `appt-${Date.now()}`, // Fallback ID for optimistic UI
+            date: newAppt.date,
+            time: newAppt.time,
+            doctor: newAppt.doctor,
+            reason: newAppt.reason,
+            // Ensure status is strictly typed
+            status: (newAppt.status as 'Programada' | 'Completada' | 'Cancelada') || 'Programada',
+            location: newAppt.location || 'Consultorio Principal'
+        };
+
         if (editingApptId) {
-            onUpdateAppointment({
-                id: editingApptId,
-                date: newAppt.date,
-                time: newAppt.time,
-                doctor: newAppt.doctor,
-                reason: newAppt.reason,
-                status: newAppt.status || 'Programada',
-                location: newAppt.location || 'Consultorio Principal'
-            } as Appointment);
+            onUpdateAppointment(appointmentData);
         } else {
-            onAddAppointment({
-                id: `appt-${Date.now()}`,
-                date: newAppt.date,
-                time: newAppt.time,
-                doctor: newAppt.doctor,
-                reason: newAppt.reason,
-                status: newAppt.status || 'Programada',
-                location: newAppt.location || 'Consultorio Principal'
-            } as Appointment);
+            onAddAppointment(appointmentData);
         }
         setIsApptFormOpen(false);
+    } else {
+        alert("Por favor complete todos los campos obligatorios.");
     }
   };
   
   const handleDownloadAppointmentPDF = (appt: Appointment) => {
       const printWindow = window.open('', '_blank');
       if(!printWindow) return;
-      alert("Generando PDF de Cita..."); 
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>TICKET DE CITA</title>
+            <style>
+                body { font-family: monospace; padding: 20px; }
+                .ticket { border: 1px dashed #000; padding: 20px; max-width: 300px; margin: 0 auto; }
+                h1 { text-align: center; font-size: 18px; margin-bottom: 20px; }
+                .info { margin-bottom: 10px; }
+                .footer { text-align: center; margin-top: 20px; font-size: 12px; }
+            </style>
+        </head>
+        <body onload="window.print()">
+            <div class="ticket">
+                <h1>RECORDATORIO DE CITA</h1>
+                <div class="info"><strong>PACIENTE:</strong><br/>${patient.name}</div>
+                <div class="info"><strong>FECHA:</strong><br/>${formatDate(appt.date)}</div>
+                <div class="info"><strong>HORA:</strong><br/>${appt.time}</div>
+                <div class="info"><strong>MÉDICO:</strong><br/>${appt.doctor}</div>
+                <div class="info"><strong>MOTIVO:</strong><br/>${appt.reason}</div>
+                <div class="info"><strong>UBICACIÓN:</strong><br/>${appt.location || 'Consultorio'}</div>
+                <div class="footer">Por favor llegar 15 min antes.</div>
+            </div>
+        </body>
+        </html>
+      `;
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
   };
 
   return (
@@ -481,12 +508,17 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
             <div className="flex items-center gap-3">
                 <h2 className="text-3xl font-bold text-slate-800">Historia Clínica</h2>
                 {/* BED INDICATOR */}
-                {patient.bedId && (
+                {assignedBed ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
+                        <Bed size={16} />
+                        {assignedBed.pabellon} - {assignedBed.bedLabel}
+                    </span>
+                ) : patient.bedId ? (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
                         <Bed size={16} />
                         Cama {patient.bedId}
                     </span>
-                )}
+                ) : null}
             </div>
             <p className="text-slate-500">Resumen general y datos demográficos del paciente.</p>
         </div>
@@ -499,7 +531,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
         </button>
       </header>
 
-      {/* Rest of UI components remain (AI Note, Patient Card, etc) */}
+      {/* AI NOTE & ALERTS */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4 opacity-5">
             <Sparkles size={120} />
@@ -590,9 +622,72 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
             </ul>
         </div>
       </div>
+      
+      {/* RESTORED APPOINTMENTS SECTION */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                  <Calendar className="text-blue-600" size={20} />
+                  <h4 className="text-slate-800 font-bold">Citas Médicas</h4>
+              </div>
+          </div>
+          <div className="p-4">
+              {/* Upcoming */}
+              <h5 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Próximas</h5>
+              <div className="space-y-3 mb-6">
+                  {upcomingAppointments.length > 0 ? upcomingAppointments.map(appt => (
+                      <div key={appt.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors">
+                          <div className="flex items-center space-x-4">
+                              <div className="text-center min-w-[60px]">
+                                  <span className="block text-xl font-bold text-blue-600">{appt.time}</span>
+                                  <span className="text-xs text-slate-500">{formatDate(appt.date)}</span>
+                              </div>
+                              <div className="h-8 w-px bg-slate-200"></div>
+                              <div>
+                                  <p className="font-bold text-slate-800">{appt.reason}</p>
+                                  <div className="flex items-center text-xs text-slate-500">
+                                      <User size={12} className="mr-1" /> {appt.doctor}
+                                      <span className="mx-2">•</span>
+                                      <MapPin size={12} className="mr-1" /> {appt.location}
+                                  </div>
+                              </div>
+                          </div>
+                          <div className="flex space-x-1">
+                               <button onClick={() => handleDownloadAppointmentPDF(appt)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg" title="Imprimir Ticket">
+                                  <Printer size={16} />
+                              </button>
+                              <button onClick={() => handleOpenEditForm(appt)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
+                                  <Edit2 size={16} />
+                              </button>
+                              <button onClick={() => initiateCancel(appt)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Cancelar/Eliminar">
+                                  <Ban size={16} />
+                              </button>
+                          </div>
+                      </div>
+                  )) : <p className="text-sm text-slate-400 italic">No hay citas próximas programadas.</p>}
+              </div>
 
-      {/* --- APPOINTMENTS & PRESCRIPTIONS SECTIONS (Standard) --- */}
-      {/* ... (Kept existing visual sections for Appointments and Prescriptions lists) ... */}
+              {/* Past */}
+              <h5 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Historial Reciente</h5>
+              <div className="space-y-2">
+                  {pastAppointments.length > 0 ? pastAppointments.slice(0, 5).map(appt => (
+                       <div key={appt.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded transition-colors text-sm">
+                           <div className="flex items-center space-x-3">
+                               <div className={`w-2 h-2 rounded-full ${appt.status === 'Completada' ? 'bg-green-500' : appt.status === 'Cancelada' ? 'bg-red-500' : 'bg-slate-300'}`}></div>
+                               <span className="text-slate-700 font-medium">{formatDate(appt.date)} - {appt.time}</span>
+                               <span className="text-slate-500 hidden md:inline">({appt.reason})</span>
+                           </div>
+                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                appt.status === 'Completada' ? 'bg-green-100 text-green-700' : 
+                                appt.status === 'Cancelada' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                                {appt.status}
+                            </span>
+                       </div>
+                  )) : <p className="text-sm text-slate-400 italic">Sin historial.</p>}
+              </div>
+          </div>
+      </div>
       
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 border-b border-slate-200 bg-emerald-50/50 flex justify-between items-center">
@@ -770,7 +865,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
 
                        <div className="pt-6 flex justify-end gap-3">
                            <button type="button" onClick={() => setIsPrescFormOpen(false)} className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-                           <button type="submit" className="px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg flex items-center shadow-md">
+                           <button type="submit" className="px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors flex items-center shadow-md">
                                <Save size={18} className="mr-2" /> Guardar Receta
                            </button>
                        </div>
@@ -779,10 +874,9 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
            </div>
        )}
 
-       {/* Appointment Modal & Cancellation Modal logic included... */}
+       {/* Appointment Modal */}
        {isApptFormOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            {/* ... Appointment Form ... */}
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-fade-in flex flex-col">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-slate-800">{editingApptId ? 'Editar Cita' : 'Nueva Cita'}</h2>
