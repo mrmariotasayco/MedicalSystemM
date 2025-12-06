@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { Bed, ArrowLeft, Activity, ClipboardList, FlaskConical, CheckCircle2, User, Thermometer, FileText, History, UserPlus, LogOut, Save, X, Edit3, Trash2, Plus, AlertTriangle, Building, Tag } from 'lucide-react';
-import { BedData, DischargedPatient, LabSection, LabMetric, CarePlanData } from '../types';
+import { BedData, DischargedPatient, LabSection, LabMetric, CarePlanData, Patient } from '../types';
 
 interface BedManagementProps {
   beds: BedData[];
+  patients: Patient[]; // New prop for selecting existing patients
   history: DischargedPatient[];
   onBack: () => void;
   onUpdateBed: (bed: BedData) => void;
   onDischarge: (bed: BedData) => void;
 }
 
-export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onBack, onUpdateBed, onDischarge }) => {
+export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, history, onBack, onUpdateBed, onDischarge }) => {
   
   // UI State
   const [selectedBed, setSelectedBed] = useState<BedData | null>(null);
@@ -18,6 +19,9 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
   const [showHistory, setShowHistory] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<DischargedPatient | null>(null);
   
+  // Patient Selection Mode for Occupation
+  const [patientSelectionMode, setPatientSelectionMode] = useState<'existing' | 'new'>('existing');
+
   // Pavilion State
   const [selectedPabellon, setSelectedPabellon] = useState<string>('Pabellón 1 I');
   
@@ -60,9 +64,14 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
     setTempSummary(bed.clinicalSummary?.join('\n') || '');
     setTempPlan(bed.plan?.join('\n') || '');
     
+    // Reset selection mode default
+    setPatientSelectionMode('existing');
+
     // If bed is available, go straight to edit mode (Registration)
     if (bed.status === 'available') {
       setIsEditing(true);
+      // Ensure admission date defaults to today
+      setFormData(prev => ({ ...prev, admissionDate: new Date().toISOString().split('T')[0] }));
     } else {
       setIsEditing(false);
     }
@@ -72,6 +81,26 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
     setSelectedBed(null);
     setIsEditing(false);
     setFormData({});
+  };
+
+  const handlePatientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const val = e.target.value;
+      if (val === 'new') {
+          setPatientSelectionMode('new');
+          setFormData(prev => ({ ...prev, patientName: '', patientId: undefined }));
+      } else {
+          setPatientSelectionMode('existing');
+          const selectedP = patients.find(p => p.id === val);
+          if (selectedP) {
+              setFormData(prev => ({
+                  ...prev,
+                  patientName: selectedP.name,
+                  patientId: selectedP.id,
+                  // Auto-fill condition if empty
+                  condition: prev.condition || (selectedP.chronicConditions[0] || '')
+              }));
+          }
+      }
   };
 
   const handleSave = () => {
@@ -492,10 +521,56 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
                 {isEditing ? (
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Paciente</label>
-                                <input type="text" value={formData.patientName || ''} onChange={e => setFormData({...formData, patientName: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg" />
-                            </div>
+                            {/* Patient Selection Logic */}
+                            {selectedBed.status === 'available' ? (
+                                <div className="md:col-span-2">
+                                     <label className="block text-sm font-medium text-slate-700 mb-1">Paciente</label>
+                                     <div className="flex gap-2 mb-2">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => { setPatientSelectionMode('existing'); setFormData({...formData, patientName: '', patientId: undefined}); }}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded border ${patientSelectionMode === 'existing' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-600'}`}
+                                        >
+                                            Seleccionar Existente
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => { setPatientSelectionMode('new'); setFormData({...formData, patientName: '', patientId: undefined}); }}
+                                            className={`flex-1 py-1.5 text-xs font-bold rounded border ${patientSelectionMode === 'new' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-slate-300 text-slate-600'}`}
+                                        >
+                                            Registrar Nuevo
+                                        </button>
+                                     </div>
+                                     
+                                     {patientSelectionMode === 'existing' ? (
+                                        <select 
+                                            className="w-full p-2 border border-slate-300 rounded-lg bg-white"
+                                            onChange={handlePatientSelect}
+                                            value={formData.patientId || ''}
+                                        >
+                                            <option value="">-- Seleccionar Paciente --</option>
+                                            {patients.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                            <option value="new">-- REGISTRAR NUEVO --</option>
+                                        </select>
+                                     ) : (
+                                        <input 
+                                            type="text" 
+                                            placeholder="Nombre Completo del Paciente" 
+                                            value={formData.patientName || ''} 
+                                            onChange={e => setFormData({...formData, patientName: e.target.value})} 
+                                            className="w-full p-2 border border-slate-300 rounded-lg" 
+                                        />
+                                     )}
+                                </div>
+                            ) : (
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Paciente</label>
+                                    <input type="text" value={formData.patientName || ''} onChange={e => setFormData({...formData, patientName: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg" />
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Fecha Ingreso</label>
                                 <input type="date" value={formData.admissionDate || ''} onChange={e => setFormData({...formData, admissionDate: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg" />
