@@ -159,8 +159,45 @@ export const updatePatient = async (patient: Patient): Promise<Patient | null> =
 
 export const deletePatient = async (id: string): Promise<boolean> => {
     if (!isDbConfigured || !supabase) return false;
+
+    // 1. Get Patient Info to check for Bed Assignment
+    const { data: patientData } = await supabase
+        .from('patients')
+        .select('bed_id')
+        .eq('id', id)
+        .single();
+
+    // 2. Free Bed if assigned (Must do this before deleting patient)
+    if (patientData?.bed_id) {
+        await supabase.from('beds').update({
+            status: 'available',
+            patient_id: null,
+            diagnosis: null,
+            admission_date: null,
+            clinical_summary: null,
+            plan: null,
+            care_plan: null,
+            lab_sections: null
+        }).eq('id', patientData.bed_id);
+    }
+
+    // 3. Delete Related Records (Manual Cascade to prevent Foreign Key Errors)
+    // We use Promise.all to delete children in parallel
+    await Promise.all([
+        supabase.from('appointments').delete().eq('patient_id', id),
+        supabase.from('evolutions').delete().eq('patient_id', id),
+        supabase.from('lab_results').delete().eq('patient_id', id),
+        supabase.from('prescriptions').delete().eq('patient_id', id)
+    ]);
+
+    // 4. Finally, delete the Patient
     const { error } = await supabase.from('patients').delete().eq('id', id);
-    if (error) throw error;
+    
+    if (error) {
+        console.error("Error deleting patient:", error);
+        throw error;
+    }
+
     return true;
 };
 
