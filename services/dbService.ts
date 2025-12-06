@@ -84,7 +84,8 @@ const mapAppointmentFromDB = (data: any): Appointment => ({
     id: data.id,
     date: data.date,
     time: data.time,
-    doctor: data.doctor_name,
+    // FIX: Map from 'doctor' column (fallback to doctor_name just in case)
+    doctor: data.doctor || data.doctor_name,
     reason: data.reason,
     status: data.status,
     location: data.location,
@@ -299,10 +300,11 @@ export const createAppointment = async (appt: Appointment, patientId: string): P
         patient_id: patientId,
         date: appt.date,
         time: appt.time,
-        doctor_name: appt.doctor,
+        // FIX: Change 'doctor_name' to 'doctor' to match DB schema error
+        doctor: appt.doctor,
         reason: appt.reason,
-        status: appt.status,
-        location: appt.location
+        status: appt.status || 'Programada',
+        location: appt.location || ''
     }]).select().single();
     if (error) throw error;
     return mapAppointmentFromDB(data);
@@ -313,7 +315,8 @@ export const updateAppointment = async (appt: Appointment): Promise<Appointment 
     const { data, error } = await supabase.from('appointments').update({
         date: appt.date,
         time: appt.time,
-        doctor_name: appt.doctor,
+        // FIX: Change 'doctor_name' to 'doctor'
+        doctor: appt.doctor,
         reason: appt.reason,
         status: appt.status,
         location: appt.location
