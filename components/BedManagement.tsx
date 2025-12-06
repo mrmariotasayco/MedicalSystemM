@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bed, ArrowLeft, Activity, ClipboardList, FlaskConical, CheckCircle2, User, Thermometer, FileText, History, UserPlus, LogOut, Save, X, Edit3, Trash2, Plus, AlertTriangle, Hash, AlignLeft, Tag } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Bed, ArrowLeft, Activity, ClipboardList, FlaskConical, CheckCircle2, User, Thermometer, FileText, History, UserPlus, LogOut, Save, X, Edit3, Trash2, Plus, AlertTriangle, Building, Tag } from 'lucide-react';
 import { BedData, DischargedPatient, LabSection, LabMetric, CarePlanData } from '../types';
 
 interface BedManagementProps {
@@ -18,6 +18,31 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
   const [showHistory, setShowHistory] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<DischargedPatient | null>(null);
   
+  // Pavilion State
+  const [selectedPabellon, setSelectedPabellon] = useState<string>('Pabellón 1 I');
+  
+  // Generate Pavilion Options (1-8, I-II)
+  const pavilionOptions = useMemo(() => {
+      const options = [];
+      for (let i = 1; i <= 8; i++) {
+          options.push(`Pabellón ${i} I`);
+          options.push(`Pabellón ${i} II`);
+      }
+      return options;
+  }, []);
+
+  // Filter beds based on selected pavilion
+  const filteredBeds = useMemo(() => {
+      return beds
+        .filter(bed => bed.pabellon === selectedPabellon)
+        .sort((a, b) => {
+            // Extract number from "Cama X" to sort numerically (1, 2, 10) instead of alphabetically (1, 10, 2)
+            const numA = parseInt(a.bedLabel?.replace(/\D/g, '') || '0');
+            const numB = parseInt(b.bedLabel?.replace(/\D/g, '') || '0');
+            return numA - numB;
+        });
+  }, [beds, selectedPabellon]);
+
   // Discharge Confirmation State
   const [bedToDischarge, setBedToDischarge] = useState<BedData | null>(null);
 
@@ -168,7 +193,6 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
                   <div className="space-y-3">
                       {section.metrics.map((metric, mIdx) => (
                           <div key={mIdx} className="flex flex-col md:flex-row gap-2 items-start bg-white p-2 rounded border border-slate-100">
-                               {/* Row 1: Type & Category */}
                                <div className="flex flex-col gap-1 w-full md:w-auto">
                                    <select
                                         value={metric.type || 'quantitative'}
@@ -195,21 +219,21 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
                               <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-2 w-full">
                                 <input 
                                     type="text" 
-                                    placeholder="Métrica (ej. Glucosa)"
+                                    placeholder="Métrica"
                                     value={metric.name}
                                     onChange={(e) => updateLabMetric(sIdx, mIdx, 'name', e.target.value)}
                                     className="p-2 border rounded text-xs w-full"
                                 />
                                 <input 
                                     type="text" 
-                                    placeholder={metric.type === 'qualitative' ? "Ej. Positivo" : "Ej. 100 mg/dL"}
+                                    placeholder={metric.type === 'qualitative' ? "Texto" : "Valor"}
                                     value={metric.value}
                                     onChange={(e) => updateLabMetric(sIdx, mIdx, 'value', e.target.value)}
                                     className="p-2 border rounded text-xs w-full"
                                 />
                                 <input 
                                     type="text" 
-                                    placeholder="Ref. (Ej. 70-100)"
+                                    placeholder="Ref."
                                     value={metric.reference || ''}
                                     onChange={(e) => updateLabMetric(sIdx, mIdx, 'reference', e.target.value)}
                                     className="p-2 border rounded text-xs w-full col-span-2 md:col-span-1"
@@ -291,7 +315,6 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
                                     {section.date}
                                 </div>
                             </div>
-                            {/* Table Header for metrics - Updated cols */}
                             <div className="grid grid-cols-12 bg-slate-50/50 px-4 py-1 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100">
                                 <div className="col-span-3">Examen</div>
                                 <div className="col-span-2">Categoría</div>
@@ -350,9 +373,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
 
   return (
     <div className="min-h-screen bg-slate-50 animate-fade-in p-6">
-      {/* Header and Grid remain same as previous... */}
-      <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        {/* ... (Same Header) ... */}
+      <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center space-x-4">
           <button onClick={onBack} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
             <ArrowLeft size={20} />
@@ -360,55 +381,86 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
           <div>
             <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
               <Bed className="text-blue-600" size={32} />
-              Gestión de Camas Hospitalarias
+              Gestión de Camas
             </h2>
-            <p className="text-slate-500">Control de ocupación, ingresos y altas médicas.</p>
+            <p className="text-slate-500">Control de hospitalización por pabellones.</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
              <button onClick={() => setShowHistory(true)} className="flex items-center space-x-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm">
                 <History size={18} />
-                <span className="font-medium hidden sm:inline">Historial de Altas</span>
+                <span className="font-medium hidden sm:inline">Historial</span>
              </button>
              <div className="flex space-x-2 text-sm font-medium">
                 <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                    <span className="w-3 h-3 rounded-full bg-red-500"></span><span className="text-slate-700">{beds.filter(b => b.status === 'occupied').length} Ocupadas</span>
-                </div>
-                <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500"></span><span className="text-slate-700">{beds.filter(b => b.status === 'available').length} Disponibles</span>
+                    <span className="w-3 h-3 rounded-full bg-red-500"></span><span className="text-slate-700">{beds.filter(b => b.status === 'occupied').length} Total</span>
                 </div>
             </div>
         </div>
       </header>
+      
+      {/* Pavilion Selector */}
+      <div className="max-w-7xl mx-auto mb-8 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                  <Building size={24} />
+              </div>
+              <div>
+                  <h3 className="font-bold text-slate-800">Seleccionar Pabellón</h3>
+                  <p className="text-xs text-slate-500">Visualizando 24 camas por sector</p>
+              </div>
+          </div>
+          <div className="relative w-full sm:w-64">
+              <select 
+                value={selectedPabellon}
+                onChange={(e) => setSelectedPabellon(e.target.value)}
+                className="w-full appearance-none bg-slate-50 border border-slate-300 text-slate-700 py-2.5 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-blue-500 font-bold"
+              >
+                  {pavilionOptions.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                  ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-700">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+              </div>
+          </div>
+      </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pb-20">
-        {beds.map((bed) => (
-          <div key={bed.id} className={`relative rounded-xl border-2 transition-all duration-200 overflow-hidden group ${bed.status === 'occupied' ? 'bg-white border-red-100 hover:border-red-300 shadow-sm' : 'bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 border-dashed'}`}>
-            <div className={`px-4 py-2 flex justify-between items-center text-sm font-bold ${bed.status === 'occupied' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-              <span>Cama {bed.id}</span>
-              {bed.status === 'occupied' ? <Activity size={16} /> : <CheckCircle2 size={16} />}
-            </div>
-            <div className="p-5 min-h-[160px] flex flex-col">
-              {bed.status === 'occupied' ? (
-                <>
-                  <div className="flex-1">
-                    <div className="flex items-start space-x-2 text-slate-800 font-bold mb-2"><User size={18} className="text-slate-400 shrink-0 mt-0.5" /><span className="line-clamp-2 leading-tight">{bed.patientName}</span></div>
-                    <div className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-md font-medium mb-3 border border-blue-200 line-clamp-1">{bed.condition || 'Sin diagnóstico'}</div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-1 rounded">Ingreso: {bed.admissionDate}</span>
-                    <button onClick={() => handleOpenBed(bed)} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors shadow-sm">Gestionar</button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-emerald-600/60 py-4">
-                    <Bed size={40} strokeWidth={1.5} className="mb-2" /><span className="font-medium text-sm mb-4">Disponible</span>
-                    <button onClick={() => handleOpenBed(bed)} className="flex items-center space-x-1 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg hover:bg-emerald-200 transition-colors text-sm font-bold"><UserPlus size={16} /><span>Ocupar</span></button>
+        {filteredBeds.length > 0 ? (
+            filteredBeds.map((bed) => (
+            <div key={bed.id} className={`relative rounded-xl border-2 transition-all duration-200 overflow-hidden group ${bed.status === 'occupied' ? 'bg-white border-red-100 hover:border-red-300 shadow-sm' : 'bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 border-dashed'}`}>
+                <div className={`px-4 py-2 flex justify-between items-center text-sm font-bold ${bed.status === 'occupied' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                <span>{bed.bedLabel || `Cama ${bed.id}`}</span>
+                {bed.status === 'occupied' ? <Activity size={16} /> : <CheckCircle2 size={16} />}
                 </div>
-              )}
+                <div className="p-5 min-h-[160px] flex flex-col">
+                {bed.status === 'occupied' ? (
+                    <>
+                    <div className="flex-1">
+                        <div className="flex items-start space-x-2 text-slate-800 font-bold mb-2"><User size={18} className="text-slate-400 shrink-0 mt-0.5" /><span className="line-clamp-2 leading-tight">{bed.patientName}</span></div>
+                        <div className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-md font-medium mb-3 border border-blue-200 line-clamp-1">{bed.condition || 'Sin diagnóstico'}</div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 bg-slate-50 px-2 py-1 rounded">Ingreso: {bed.admissionDate}</span>
+                        <button onClick={() => handleOpenBed(bed)} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 transition-colors shadow-sm">Gestionar</button>
+                    </div>
+                    </>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-emerald-600/60 py-4">
+                        <Bed size={40} strokeWidth={1.5} className="mb-2" /><span className="font-medium text-sm mb-4">Disponible</span>
+                        <button onClick={() => handleOpenBed(bed)} className="flex items-center space-x-1 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg hover:bg-emerald-200 transition-colors text-sm font-bold"><UserPlus size={16} /><span>Ocupar</span></button>
+                    </div>
+                )}
+                </div>
             </div>
-          </div>
-        ))}
+            ))
+        ) : (
+             <div className="col-span-full py-12 text-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-200">
+                <Bed size={48} className="mx-auto mb-3 opacity-20" />
+                <p>No se encontraron camas para {selectedPabellon}.</p>
+            </div>
+        )}
       </div>
 
       {/* BED DETAIL / EDIT MODAL */}
@@ -418,9 +470,9 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
             
             <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-start sticky top-0 z-20">
               <div className="flex items-start space-x-4">
-                 <div className={`p-3 border rounded-xl shadow-sm text-center min-w-[80px] ${selectedBed.status === 'occupied' ? 'bg-white border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                    <span className="block text-xs text-slate-400 font-bold uppercase">Cama</span>
-                    <span className={`block text-3xl font-bold ${selectedBed.status === 'occupied' ? 'text-red-600' : 'text-emerald-600'}`}>{selectedBed.id}</span>
+                 <div className={`p-3 border rounded-xl shadow-sm text-center min-w-[100px] ${selectedBed.status === 'occupied' ? 'bg-white border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                    <span className="block text-xs text-slate-400 font-bold uppercase">{selectedBed.pabellon || 'General'}</span>
+                    <span className={`block text-xl font-bold ${selectedBed.status === 'occupied' ? 'text-red-600' : 'text-emerald-600'}`}>{selectedBed.bedLabel || `Cama ${selectedBed.id}`}</span>
                  </div>
                  <div>
                     {isEditing || selectedBed.status === 'available' ? (
@@ -464,7 +516,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
                             <textarea rows={4} value={tempPlan} onChange={e => setTempPlan(e.target.value)} className="w-full p-3 border border-slate-300 rounded-lg resize-y" placeholder="- Dieta blanda..." />
                         </div>
 
-                        {/* --- CARE PLAN INPUTS ADDED HERE FOR EDITING --- */}
+                        {/* --- CARE PLAN INPUTS --- */}
                         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 mt-6">
                             <h5 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
                                 <Activity size={18} /> Insumos y Monitoreo (Datos para Receta)
@@ -550,7 +602,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle className="text-red-600" size={32} /></div>
               <h3 className="text-xl font-bold text-slate-800 mb-2">¿Confirmar Alta Médica?</h3>
-              <p className="text-slate-600 mb-6">Está a punto de dar de alta al paciente <span className="font-semibold text-slate-800">{bedToDischarge.patientName}</span> de la Cama {bedToDischarge.id}.<br /><br />Esta acción liberará la cama inmediatamente y guardará el registro en el historial.</p>
+              <p className="text-slate-600 mb-6">Está a punto de dar de alta al paciente <span className="font-semibold text-slate-800">{bedToDischarge.patientName}</span> de {bedToDischarge.pabellon} - {bedToDischarge.bedLabel}.<br /><br />Esta acción liberará la cama inmediatamente y guardará el registro en el historial.</p>
               <div className="flex space-x-3 justify-center">
                 <button onClick={() => setBedToDischarge(null)} className="px-5 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors">Cancelar</button>
                 <button onClick={confirmDischarge} className="px-5 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center shadow-lg shadow-red-600/30"><LogOut size={18} className="mr-2" /> Confirmar Alta</button>
@@ -591,7 +643,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, history, onB
                          <div>
                             <div className="flex items-center space-x-2 text-slate-500 text-sm mb-1 uppercase font-bold tracking-wider"><History size={14} /> <span>Registro Histórico</span></div>
                             <h3 className="text-2xl font-bold text-slate-800">{selectedHistoryItem.patientName}</h3>
-                            <div className="flex items-center space-x-2 mt-1"><span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-sm font-medium">Cama {selectedHistoryItem.id} (Anterior)</span><span className="text-slate-400">|</span><span className="text-slate-600 font-medium">Alta: {selectedHistoryItem.dischargeDate}</span></div>
+                            <div className="flex items-center space-x-2 mt-1"><span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-sm font-medium">{selectedHistoryItem.pabellon || 'General'} - {selectedHistoryItem.bedLabel || selectedHistoryItem.id} (Anterior)</span><span className="text-slate-400">|</span><span className="text-slate-600 font-medium">Alta: {selectedHistoryItem.dischargeDate}</span></div>
                          </div>
                          <button onClick={() => setSelectedHistoryItem(null)} className="p-2 hover:bg-slate-200 rounded-full"><X size={24} className="text-slate-500" /></button>
                     </div>
