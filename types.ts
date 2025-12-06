@@ -120,6 +120,10 @@ export interface LabSection {
 export interface BedData {
   id: number;
   status: 'occupied' | 'available';
+  // New Fields for Pavilions
+  pabellon?: string; // e.g. "Pabellón 1 I"
+  bedLabel?: string; // e.g. "Cama 1"
+
   patientId?: string; // Link back to patient record
   patientName?: string;
   condition?: string;
