@@ -477,6 +477,7 @@ export function App() {
       return (
         <BedManagement 
             beds={beds}
+            patients={patients} // Pass patients list
             history={dischargeHistory}
             onBack={() => setView('history')} 
             onUpdateBed={handleUpdateBed}
