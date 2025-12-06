@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Patient, BedData, CarePlanData } from '../types';
 import { Search, UserPlus, Eye, Edit2, Trash2, Users, AlertTriangle, Bed, PlusCircle, X, Droplet, Calendar, Activity, Save } from 'lucide-react';
 
@@ -30,11 +30,11 @@ export const PatientList: React.FC<PatientListProps> = ({
   const [assigningPatient, setAssigningPatient] = useState<Patient | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
   
-  // New Care Plan Form State within Assignment
+  // New Care Plan Form State within Assignment (Removed Hardware Fields)
   const [carePlanForm, setCarePlanForm] = useState<CarePlanData>({
       hgt1400: '', hgt2200: '', hgt0600: '',
-      catheterType: '18', needleSize: '21', nasogastricSonde: '', foleySonde: '', oxygenMode: '',
-      venoclysis: true, microdropper: false, tripleWayCode: true
+      catheterType: '', needleSize: '', nasogastricSonde: '', foleySonde: '', oxygenMode: '',
+      venoclysis: false, microdropper: false, tripleWayCode: false
   });
 
   const filteredPatients = patients.filter(p => 
@@ -43,6 +43,19 @@ export const PatientList: React.FC<PatientListProps> = ({
   );
 
   const availableBeds = beds.filter(b => b.status === 'available');
+  
+  // Group available beds by Pavilion
+  const availableBedsByPavilion = useMemo(() => {
+    return availableBeds.reduce((acc, bed) => {
+        const key = bed.pabellon || 'Sin Pabellón';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(bed);
+        return acc;
+    }, {} as Record<string, BedData[]>);
+  }, [availableBeds]);
+
+  // Sort keys
+  const sortedPavilions = Object.keys(availableBedsByPavilion).sort();
 
   const handleConfirmDelete = () => {
     if (patientToDelete) {
@@ -70,8 +83,8 @@ export const PatientList: React.FC<PatientListProps> = ({
           setSelectedBedId(null);
           setCarePlanForm({
             hgt1400: '', hgt2200: '', hgt0600: '',
-            catheterType: '18', needleSize: '21', nasogastricSonde: '', foleySonde: '', oxygenMode: '',
-            venoclysis: true, microdropper: false, tripleWayCode: true
+            catheterType: '', needleSize: '', nasogastricSonde: '', foleySonde: '', oxygenMode: '',
+            venoclysis: false, microdropper: false, tripleWayCode: false
           });
       }
   };
@@ -278,7 +291,7 @@ export const PatientList: React.FC<PatientListProps> = ({
       {/* Assign Bed Wizard Modal */}
       {assigningPatient && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-10">
                      <div>
                         <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -292,12 +305,12 @@ export const PatientList: React.FC<PatientListProps> = ({
                 </div>
                 
                 <div className="p-6 overflow-y-auto">
-                    {/* STEP 1: CARE PLAN FORM (MOVED TO TOP) */}
+                    {/* STEP 1: CARE PLAN FORM (SIMPLIFIED) */}
                     <div className="mb-8">
-                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">1. Configuración Inicial de Cuidados</h4>
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">1. Configuración Inicial (HGT)</h4>
                         <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
                             <h5 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                                <Activity size={18} /> Insumos y Monitoreo (Datos para Receta)
+                                <Activity size={18} /> Monitoreo Hemoglucotest
                             </h5>
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -314,54 +327,35 @@ export const PatientList: React.FC<PatientListProps> = ({
                                     <input type="text" className="w-full p-2 border rounded text-sm" value={carePlanForm.hgt0600} onChange={e => handleUpdateCarePlan('hgt0600', e.target.value)} placeholder="mg%" />
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Catéter (No.)</label>
-                                    <input type="text" className="w-full p-2 border rounded text-sm" value={carePlanForm.catheterType} onChange={e => handleUpdateCarePlan('catheterType', e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Aguja (No.)</label>
-                                    <input type="text" className="w-full p-2 border rounded text-sm" value={carePlanForm.needleSize} onChange={e => handleUpdateCarePlan('needleSize', e.target.value)} />
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-6 mt-4 p-3 bg-white rounded-lg border border-slate-100">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={carePlanForm.venoclysis} onChange={e => handleUpdateCarePlan('venoclysis', e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                                    <span className="text-sm font-medium text-slate-700">Equipo Venoclisis</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={carePlanForm.tripleWayCode} onChange={e => handleUpdateCarePlan('tripleWayCode', e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                                    <span className="text-sm font-medium text-slate-700">Llave Triple Vía</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={carePlanForm.microdropper} onChange={e => handleUpdateCarePlan('microdropper', e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                                    <span className="text-sm font-medium text-slate-700">Microgotero</span>
-                                </label>
-                            </div>
                         </div>
                     </div>
 
-                    {/* STEP 2: SELECT BED (MOVED TO BOTTOM) */}
+                    {/* STEP 2: SELECT BED (GROUPED BY PAVILION) */}
                     <div>
                         <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">2. Seleccionar Cama Disponible</h4>
-                        {availableBeds.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {availableBeds.map(bed => (
-                                    <button
-                                        key={bed.id}
-                                        onClick={() => setSelectedBedId(bed.id)}
-                                        className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all ${
-                                            selectedBedId === bed.id 
-                                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg scale-105' 
-                                            : 'border-emerald-100 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-300'
-                                        }`}
-                                    >
-                                        <Bed size={32} className={`mb-2 ${selectedBedId === bed.id ? 'text-white' : 'text-emerald-600'}`} />
-                                        <span className={`font-bold ${selectedBedId === bed.id ? 'text-white' : 'text-emerald-800'}`}>Cama {bed.id}</span>
-                                        <span className={`text-xs ${selectedBedId === bed.id ? 'text-blue-100' : 'text-emerald-600'}`}>Disponible</span>
-                                    </button>
+                        {sortedPavilions.length > 0 ? (
+                            <div className="space-y-6">
+                                {sortedPavilions.map(pavilion => (
+                                    <div key={pavilion} className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h5 className="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span> {pavilion}
+                                        </h5>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                            {availableBedsByPavilion[pavilion].map(bed => (
+                                                <button
+                                                    key={bed.id}
+                                                    onClick={() => setSelectedBedId(bed.id)}
+                                                    className={`flex flex-col items-center justify-center p-3 border rounded-lg transition-all ${
+                                                        selectedBedId === bed.id 
+                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                                                        : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-600'
+                                                    }`}
+                                                >
+                                                    <span className="text-xs font-bold">{bed.bedLabel || `Cama ${bed.id}`}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
