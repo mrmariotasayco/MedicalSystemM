@@ -7,13 +7,19 @@ import { Login } from './components/Login';
 import { PatientList } from './components/PatientList';
 import { PatientForm } from './components/PatientForm';
 import { BedManagement } from './components/BedManagement';
+import { AffiliationData } from './components/AffiliationData';
 import { UserProfileModal } from './components/UserProfileModal'; 
 import { Patient, EvolutionNote, LabResult, ViewState, Appointment, BedData, DischargedPatient, LabSection, Prescription, LabMetric } from './types';
-import { Menu, LogOut, Stethoscope, Loader2, Settings, X } from 'lucide-react';
+import { Menu, LogOut, Stethoscope, Loader2, Settings, X, Calendar, Clock, MapPin, ArrowRight, Activity, Heart } from 'lucide-react';
 import { UserProfile, signOut, getCurrentSession, updateUserProfile, deleteUserAccount } from './services/authService';
 
 // Import Database Services
 import * as dbService from './services/dbService';
+
+// Extended type for appointment with patient name for the modal
+interface ReminderAppointment extends Appointment {
+    patientName?: string;
+}
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -31,6 +37,10 @@ export function App() {
   // Bed Management State
   const [beds, setBeds] = useState<BedData[]>([]);
   const [dischargeHistory, setDischargeHistory] = useState<DischargedPatient[]>([]);
+
+  // Daily Reminder State
+  const [dailyAppointments, setDailyAppointments] = useState<ReminderAppointment[]>([]);
+  const [showReminderModal, setShowReminderModal] = useState(false);
 
   // Patient CRUD UI State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -61,6 +71,7 @@ export function App() {
   useEffect(() => {
     if (currentUser) {
         loadData();
+        checkDailyAppointments();
     }
   }, [currentUser]);
 
@@ -80,9 +91,22 @@ export function App() {
           
       } catch (error) {
           console.error("Failed to load initial data", error);
-          // Don't alert here to avoid spamming on mounting if DB has transient issue
       } finally {
-          setIsLoading(false);
+          // Add a small artificial delay for the animation to be appreciated if data loads too fast
+          setTimeout(() => setIsLoading(false), 1500);
+      }
+  };
+
+  const checkDailyAppointments = async () => {
+      if (!currentUser) return;
+      try {
+          const appts = await dbService.fetchDoctorAppointmentsForToday(currentUser.fullName);
+          if (appts && appts.length > 0) {
+              setDailyAppointments(appts);
+              setShowReminderModal(true);
+          }
+      } catch (error) {
+          console.error("Error checking daily appointments", error);
       }
   };
 
@@ -179,8 +203,8 @@ export function App() {
         const bedsData = await dbService.fetchBeds();
         setBeds(bedsData);
 
-    } catch (error) {
-        alert("Error al eliminar paciente.");
+    } catch (error: any) {
+        alert(`Error al eliminar paciente: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -191,8 +215,9 @@ export function App() {
         if (created) {
             setPatientEvolutions(prev => [created, ...prev]);
         }
-    } catch (error) {
-        alert("Error al guardar evolución.");
+    } catch (error: any) {
+        console.error("Add Evolution Error:", error);
+        alert(`Error al guardar evolución: ${error.message || JSON.stringify(error)}`);
     }
   };
 
@@ -202,8 +227,8 @@ export function App() {
         if (updated) {
              setPatientEvolutions(prev => prev.map(e => e.id === updated.id ? updated : e));
         }
-    } catch (error) {
-        alert("Error al actualizar evolución (Posible bloqueo de 24h).");
+    } catch (error: any) {
+        alert(`Error al actualizar evolución: ${error.message || 'Posible bloqueo de 24h'}`);
     }
   };
 
@@ -211,8 +236,8 @@ export function App() {
       try {
           await dbService.deleteEvolution(id);
           setPatientEvolutions(prev => prev.filter(e => e.id !== id));
-      } catch (error) {
-          alert("Error al eliminar evolución (Posible bloqueo de 24h).");
+      } catch (error: any) {
+          alert(`Error al eliminar evolución: ${error.message || 'Posible bloqueo de 24h'}`);
       }
   };
 
@@ -237,7 +262,7 @@ export function App() {
                     type: newResult.resultType,
                     category: newResult.category,
                     isAbnormal: newResult.isAbnormal,
-                    reference: newResult.referenceRange
+                    // reference removed
                 };
 
                 // Clone existing sections to avoid mutation
@@ -449,7 +474,7 @@ export function App() {
                           type: l.resultType || 'quantitative', 
                           value: displayValue,
                           isAbnormal: l.isAbnormal,
-                          reference: l.referenceRange || ''
+                          // Reference removed
                       };
                   })
               };
@@ -466,7 +491,7 @@ export function App() {
           console.error(error);
           alert("Error al asignar cama.");
       } finally {
-          setIsLoading(false);
+          // Delay handled in loadData now
       }
   };
 
@@ -523,6 +548,23 @@ export function App() {
     setIsFormOpen(true);
   };
 
+  // --- NAVIGATION FROM REMINDER MODAL ---
+  const handleViewAppointmentDetail = (patientName: string) => {
+      // 1. Find the patient in the loaded patient list
+      const patient = patients.find(p => p.name === patientName);
+      
+      if (patient) {
+          // 2. Select Patient and Switch View
+          setSelectedPatient(patient);
+          setView('history');
+          setShowReminderModal(false);
+      } else {
+          // Fallback if patient not found in current loaded list
+          alert("No se pudo cargar el perfil del paciente. Intente buscarlo manualmente en el dashboard.");
+          setShowReminderModal(false);
+      }
+  };
+
   // --- RENDER LOGIC ---
 
   const renderContent = () => {
@@ -551,6 +593,7 @@ export function App() {
             onAddEvolution={handleAddEvolution}
             onUpdateEvolution={handleUpdateEvolution}
             onDeleteEvolution={handleDeleteEvolution}
+            doctorName={currentUser?.fullName} // Pass current user name for auto-fill
           />
         );
       case 'results':
@@ -560,6 +603,13 @@ export function App() {
                 onAddResult={handleAddLabResult}
                 onUpdateResult={handleUpdateLabResult}
                 onDeleteResult={handleDeleteLabResult}
+            />
+        );
+      case 'affiliation':
+        return (
+            <AffiliationData 
+                patient={selectedPatient}
+                onEditPatientProfile={() => openEditForm(selectedPatient)}
             />
         );
       default:
@@ -612,12 +662,6 @@ export function App() {
               <span className="text-xl font-bold">MedicalMarioLT</span>
             </div>
             <div className="flex items-center gap-4">
-                {isLoading && (
-                    <div className="flex items-center text-blue-200 text-sm">
-                        <Loader2 size={16} className="animate-spin mr-2" />
-                        Sincronizando...
-                    </div>
-                )}
                 <div 
                     onClick={() => setIsProfileOpen(true)}
                     className="hidden md:flex flex-col items-end mr-2 cursor-pointer hover:bg-slate-800 px-2 py-1 rounded transition-colors group"
@@ -665,6 +709,78 @@ export function App() {
                 onDelete={handleDeleteAccount}
             />
         )}
+
+        {/* LOADING OVERLAY (MEDICAL THEME) */}
+        {isLoading && (
+            <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center animate-fade-in">
+                <div className="relative mb-8">
+                    {/* Pulsing ring */}
+                    <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+                    <div className="absolute inset-2 bg-blue-400 rounded-full animate-ping opacity-30 animation-delay-300"></div>
+                    
+                    {/* Central Icon */}
+                    <div className="relative bg-white p-8 rounded-full shadow-2xl border-4 border-blue-50 flex items-center justify-center">
+                        <Activity size={64} className="text-blue-600" />
+                    </div>
+                </div>
+                
+                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">MedicalMarioLT</h2>
+                <p className="text-slate-500 mt-3 font-medium flex items-center bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                    <Loader2 size={16} className="animate-spin mr-2 text-blue-600" />
+                    Preparando entorno clínico...
+                </p>
+            </div>
+        )}
+
+        {/* DAILY REMINDER MODAL */}
+        {showReminderModal && !isLoading && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg animate-fade-in flex flex-col overflow-hidden max-h-[80vh]">
+                    <div className="p-6 bg-blue-600 text-white flex justify-between items-start">
+                         <div>
+                             <h3 className="text-xl font-bold flex items-center gap-2"><Calendar size={20} /> Citas Pendientes para Hoy</h3>
+                             <p className="text-blue-100 text-sm mt-1">Hola Dr(a). {currentUser.fullName.split(' ')[0]}, tiene pacientes esperando.</p>
+                         </div>
+                         <button onClick={() => setShowReminderModal(false)} className="text-blue-100 hover:text-white hover:bg-blue-500 rounded-full p-1"><X size={20} /></button>
+                    </div>
+                    <div className="p-4 bg-slate-50 border-b border-slate-200">
+                         <div className="text-xs font-bold text-slate-500 uppercase flex justify-between px-2">
+                             <span>Hora</span>
+                             <span>Paciente / Ubicación</span>
+                             <span>Acción</span>
+                         </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                        {dailyAppointments.map(appt => (
+                            <div key={appt.id} className="bg-white p-4 rounded-lg border border-slate-200 hover:border-blue-300 shadow-sm flex items-center justify-between group transition-all">
+                                <div className="flex flex-col items-center justify-center bg-blue-50 text-blue-700 rounded p-2 min-w-[60px]">
+                                    <Clock size={16} className="mb-1" />
+                                    <span className="font-bold text-lg leading-none">{appt.time}</span>
+                                </div>
+                                <div className="flex-1 px-4">
+                                    <h4 className="font-bold text-slate-800">{appt.patientName || 'Paciente Desconocido'}</h4>
+                                    <div className="flex items-center text-xs text-slate-500 mt-1">
+                                        <MapPin size={12} className="mr-1" />
+                                        {appt.location || 'Consultorio Principal'}
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => handleViewAppointmentDetail(appt.patientName || '')}
+                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                    title="Ver historia clínica"
+                                >
+                                    <ArrowRight size={20} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-4 border-t border-slate-200 bg-slate-50 text-right">
+                        <button onClick={() => setShowReminderModal(false)} className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-100 font-medium">Cerrar Recordatorio</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
     </div>
   );
 }
@@ -742,6 +858,28 @@ export function App() {
                 onSave={handleUpdateProfile}
                 onDelete={handleDeleteAccount}
             />
+        )}
+
+        {/* LOADING OVERLAY (Global) */}
+        {isLoading && (
+            <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center animate-fade-in">
+                <div className="relative mb-8">
+                    {/* Pulsing ring */}
+                    <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+                    <div className="absolute inset-2 bg-blue-400 rounded-full animate-ping opacity-30 animation-delay-300"></div>
+                    
+                    {/* Central Icon */}
+                    <div className="relative bg-white p-8 rounded-full shadow-2xl border-4 border-blue-50 flex items-center justify-center">
+                        <Activity size={64} className="text-blue-600" />
+                    </div>
+                </div>
+                
+                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">MedicalMarioLT</h2>
+                <p className="text-slate-500 mt-3 font-medium flex items-center bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                    <Loader2 size={16} className="animate-spin mr-2 text-blue-600" />
+                    Preparando entorno clínico...
+                </p>
+            </div>
         )}
     </div>
   );
