@@ -32,7 +32,6 @@ export interface LabResult {
   textValue?: string; // Optional (only for qualitative)
   
   unit?: string; // Optional for qualitative
-  referenceRange: string;
   isAbnormal: boolean;
   category: 'Hematología' | 'Bioquímica' | 'Inmunología' | 'Microbiología' | 'Patología';
   fileName?: string; 
@@ -107,7 +106,6 @@ export interface LabMetric {
   value: string; // Display string (e.g. "10 mg/dL" or "Positive")
   type: 'quantitative' | 'qualitative'; // For categorization
   isAbnormal?: boolean;
-  reference?: string; // New: Reference range string
   category?: string; // New: Specific category for the metric
 }
 
@@ -138,4 +136,4 @@ export interface DischargedPatient extends BedData {
   dischargeDate: string;
 }
 
-export type ViewState = 'history' | 'evolution' | 'results' | 'beds';
+export type ViewState = 'history' | 'evolution' | 'results' | 'beds' | 'affiliation';
