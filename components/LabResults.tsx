@@ -64,13 +64,16 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
     resultType: 'quantitative',
     value: 0,
     textValue: '',
-    unit: '',
-    referenceRange: '',
+    unit: 'mg/dL',
     isAbnormal: false,
     category: 'Bioquímica',
     fileName: '',
     fileUrl: ''
   });
+
+  const unitOptions = [
+      'mg/dL', 'g/dL', '%', 'fl', 'mm3', 'UI/L', 'mEq/L', 'ng/mL', 'pg/mL', 'mcg/dL', 'mmol/L', 'x10^9/L', 'x10^12/L', 'min', 'seg', 'grados', 'cel/uL', 'copias/mL'
+  ];
 
   const filteredResults = useMemo(() => {
       return results.filter(r => {
@@ -113,8 +116,6 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
     if (!printWindow) { alert("Por favor habilite las ventanas emergentes para generar el reporte."); setIsGeneratingPdf(false); return; }
     // ... HTML Content ...
     const htmlContent = `<!DOCTYPE html><html><head><title>Reporte Lab</title><script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script></head><body>Generando PDF... (Simplificado para brevedad) <script>window.print();</script></body></html>`;
-    // Note: Reusing full HTML logic from previous file would be too long here, assuming logic persists or using short placeholder for brevity in this update block.
-    // Ideally maintain previous full implementation.
     printWindow.document.write('<h1>Generando Reporte...</h1>'); 
     printWindow.document.close();
     printWindow.print();
@@ -150,8 +151,7 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
         resultType: 'quantitative',
         value: 0,
         textValue: '',
-        unit: '',
-        referenceRange: '',
+        unit: 'mg/dL',
         isAbnormal: false,
         category: 'Bioquímica',
         fileName: '',
@@ -183,7 +183,7 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
               testName: formData.testName!,
               category: (formData.category as any) || 'Bioquímica',
               isAbnormal: !!formData.isAbnormal,
-              referenceRange: formData.referenceRange || '',
+              // referenceRange removed
               fileName: formData.fileName,
               fileUrl: uploadedUrl,
               resultType: (formData.resultType as 'quantitative' | 'qualitative'),
@@ -355,7 +355,7 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
        {/* Form Modal (Create/Edit) */}
        {isFormOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fade-in flex flex-col">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in flex flex-col my-8">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-10">
                     <div className="flex items-center space-x-3">
                         <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><FileText size={24} /></div>
@@ -365,75 +365,72 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Fecha del Examen</label>
-                            <input type="date" name="date" required value={formData.date} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
-                        </div>
+                    
+                    {/* ROW 1: Category, Name, Value, Unit */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
                             <select name="category" value={formData.category} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                                 <option value="Bioquímica">Bioquímica</option><option value="Hematología">Hematología</option><option value="Inmunología">Inmunología</option><option value="Microbiología">Microbiología</option><option value="Patología">Patología</option>
                             </select>
                         </div>
-                        <div className="md:col-span-2">
+                        <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Nombre del Examen</label>
-                            <input type="text" name="testName" list="testNames" required placeholder="Ej. Glucosa, Biopsia, Exudado..." value={formData.testName} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <input type="text" name="testName" list="testNames" required placeholder="Ej. Glucosa" value={formData.testName} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                             <datalist id="testNames"><option value="Glucosa" /><option value="Hemoglobina Glicosilada" /><option value="Hemograma Completo" /><option value="EGO (Examen General de Orina)" /><option value="Biopsia de Piel" /><option value="Prueba COVID-19" /></datalist>
                         </div>
-
-                        {/* RESULT TYPE SELECTOR */}
-                        <div className="md:col-span-2 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                             <label className="block text-sm font-bold text-slate-700 mb-3">Tipo de Resultado</label>
-                             <div className="flex space-x-6 mb-4">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="resultType" value="quantitative" checked={formData.resultType === 'quantitative'} onChange={handleInputChange} className="text-blue-600 focus:ring-blue-500" />
-                                    <span className="text-slate-700">Cuantitativo (Numérico)</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="radio" name="resultType" value="qualitative" checked={formData.resultType === 'qualitative'} onChange={handleInputChange} className="text-blue-600 focus:ring-blue-500" />
-                                    <span className="text-slate-700">Cualitativo (Descriptivo)</span>
-                                </label>
-                             </div>
-
+                        <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Valor</label>
                              {formData.resultType === 'quantitative' ? (
-                                <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-1">Valor</label>
-                                        <input type="number" name="value" step="0.01" required value={formData.value} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" placeholder="0.00" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-600 mb-1">Unidad</label>
-                                        <input type="text" name="unit" required value={formData.unit} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" placeholder="mg/dL, %, etc." />
-                                    </div>
-                                </div>
+                                <input type="number" name="value" step="0.01" required value={formData.value} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0.00" />
                              ) : (
-                                <div className="animate-fade-in">
-                                    <label className="block text-sm font-medium text-slate-600 mb-1">Descripción del Resultado</label>
-                                    <textarea name="textValue" rows={2} required value={formData.textValue} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white resize-none" placeholder="Ej. Positivo, Negativo, Se observa..." />
-                                </div>
+                                <input type="text" name="textValue" required value={formData.textValue} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Texto" />
                              )}
                         </div>
-
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Rango / Valor de Referencia</label>
-                            <input type="text" name="referenceRange" placeholder={formData.resultType === 'quantitative' ? "Ej. 70-100" : "Ej. Negativo"} value={formData.referenceRange} onChange={handleInputChange} className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Unidad</label>
+                             <select 
+                                name="unit" 
+                                value={formData.unit} 
+                                onChange={handleInputChange} 
+                                disabled={formData.resultType !== 'quantitative'}
+                                className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                                <option value="">-</option>
+                                {unitOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                             </select>
                         </div>
-                        <div className="flex items-center h-full pt-6">
-                             <label className="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" name="isAbnormal" checked={formData.isAbnormal} onChange={handleInputChange} className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300" />
-                                <span className={`font-medium ${formData.isAbnormal ? 'text-red-600' : 'text-slate-700'}`}>Marcar como Anormal</span>
+                    </div>
+
+                    {/* ROW 2: Type, Abnormal */}
+                    <div className="flex flex-col md:flex-row items-center gap-6 mt-2 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                         <div className="flex space-x-6">
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="resultType" value="quantitative" checked={formData.resultType === 'quantitative'} onChange={handleInputChange} className="text-blue-600 focus:ring-blue-500" />
+                                <span className="text-slate-700 font-medium">Cuantitativo</span>
                             </label>
-                        </div>
-                        
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Adjuntar PDF (Real)</label>
-                            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
-                                <input type="file" accept=".pdf" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                <Upload className="text-slate-400 mb-2" size={32} />
-                                <p className="text-sm text-slate-600 font-medium">{formData.fileName ? formData.fileName : 'Haga clic para subir archivo PDF'}</p>
-                                {formData.fileName && <p className="text-xs text-slate-400 mt-1">Archivo seleccionado para subir</p>}
-                            </div>
+                            <label className="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="resultType" value="qualitative" checked={formData.resultType === 'qualitative'} onChange={handleInputChange} className="text-blue-600 focus:ring-blue-500" />
+                                <span className="text-slate-700 font-medium">Cualitativo</span>
+                            </label>
+                         </div>
+                         <div className="h-6 w-px bg-slate-300 hidden md:block"></div>
+                         <label className="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox" name="isAbnormal" checked={formData.isAbnormal} onChange={handleInputChange} className="w-5 h-5 text-red-600 rounded focus:ring-red-500 border-gray-300" />
+                            <span className={`font-medium ${formData.isAbnormal ? 'text-red-600' : 'text-slate-700'}`}>Es Anormal</span>
+                        </label>
+                        {/* Hidden input for date to ensure it is submitted if not visible in main grid */}
+                        <input type="hidden" name="date" value={formData.date} /> 
+                    </div>
+
+                    {/* ROW 3: PDF */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Adjuntar PDF</label>
+                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
+                            <input type="file" accept=".pdf" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                            <Upload className="text-slate-400 mb-2" size={32} />
+                            <p className="text-sm text-slate-600 font-medium">{formData.fileName ? formData.fileName : 'Haga clic para subir archivo'}</p>
+                            {formData.fileName && <p className="text-xs text-slate-400 mt-1">Archivo seleccionado</p>}
                         </div>
                     </div>
 
@@ -448,15 +445,15 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
         </div>
       )}
 
-      {/* View Detail Modal & Delete Modal logic preserved... */}
+      {/* View Detail Modal */}
       {viewingResult && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg animate-fade-in">
-                <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
+             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in my-8 flex flex-col">
+                <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl sticky top-0 z-10">
                     <h3 className="text-xl font-bold text-slate-800">Detalle de Examen</h3>
                     <button onClick={() => setViewingResult(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
                     <div className="grid grid-cols-2 gap-4">
                         <div><label className="text-xs font-bold text-slate-400 uppercase">Fecha</label><div className="text-slate-800 font-medium">{viewingResult.date}</div></div>
                         <div><label className="text-xs font-bold text-slate-400 uppercase">Categoría</label><div className="text-slate-800 font-medium">{viewingResult.category}</div></div>
@@ -469,7 +466,7 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
                         </div>
                         {viewingResult.isAbnormal && <div className="flex items-center text-red-600 text-sm font-bold mt-1"><AlertCircle size={14} className="mr-1" /> ANORMAL</div>}
                     </div>
-                    <div><label className="text-xs font-bold text-slate-400 uppercase">Rango de Referencia</label><div className="text-slate-600">{viewingResult.referenceRange || 'No especificado'}</div></div>
+                    {/* Reference Range Removed */}
                     {viewingResult.fileName && (
                          <div className="pt-2">
                              <button onClick={() => handleOpenFile(viewingResult.fileUrl || '')} className="w-full flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition-colors"><File size={16} /><span>Ver Archivo Adjunto ({viewingResult.fileName})</span><ExternalLink size={14} /></button>
@@ -481,6 +478,7 @@ export const LabResults: React.FC<LabResultsProps> = ({ results, onAddResult, on
         </div>
       )}
 
+      {/* Delete Confirmation (Same as before) */}
       {resultToDelete && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-fade-in">
