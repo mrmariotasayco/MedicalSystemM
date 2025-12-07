@@ -24,22 +24,53 @@ const mapPatientFromDB = (data: any): Patient => ({
     bedId: data.bed_id
 });
 
-const mapBedFromDB = (data: any): BedData => ({
-    id: data.id,
-    status: data.status,
-    // Map new columns
-    pabellon: data.pabellon || 'General',
-    bedLabel: data.bed_label || `Cama ${data.id}`,
+const mapBedFromDB = (data: any): BedData => {
+    // LOGIC FOR 1-384 NUMBERING PATTERN
+    // Each Pavilion has 2 sectors (I and II).
+    // Each Sector has 24 beds.
+    // Total per Pavilion = 48 beds.
     
-    patientId: data.patient_id,
-    patientName: data.patients?.full_name || data.patient_name_snapshot, 
-    condition: data.diagnosis,
-    admissionDate: data.admission_date,
-    clinicalSummary: data.clinical_summary || [],
-    plan: data.plan || [],
-    carePlan: data.care_plan || {},
-    labSections: data.lab_sections || []
-});
+    // Safety check: ensure ID is a number
+    const bedId = typeof data.id === 'number' ? data.id : parseInt(data.id, 10);
+    
+    let calculatedPabellon = 'General';
+    
+    if (!isNaN(bedId) && bedId > 0) {
+        // IDs are 1-based. Convert to 0-based for math.
+        const globalIndex = bedId - 1;
+        
+        // Calculate Pavilion Number (1-8)
+        // 0-47 -> Pav 1, 48-95 -> Pav 2, etc.
+        const pavilionNum = Math.floor(globalIndex / 48) + 1;
+        
+        // Calculate remainder within the pavilion (0-47)
+        const pavilionRemainder = globalIndex % 48;
+        
+        // Calculate Sector (I or II)
+        // 0-23 -> Sector I, 24-47 -> Sector II
+        const sector = pavilionRemainder < 24 ? 'I' : 'II';
+        
+        calculatedPabellon = `Pabellón ${pavilionNum} ${sector}`;
+    }
+
+    return {
+        id: data.id,
+        status: data.status,
+        // Override DB string with Calculated Logic
+        pabellon: calculatedPabellon,
+        // Force label to be "Cama {ID}" to respect the 1-384 global sequence
+        bedLabel: `Cama ${data.id}`,
+        
+        patientId: data.patient_id,
+        patientName: data.patients?.full_name || data.patient_name_snapshot, 
+        condition: data.diagnosis,
+        admissionDate: data.admission_date,
+        clinicalSummary: data.clinical_summary || [],
+        plan: data.plan || [],
+        carePlan: data.care_plan || {},
+        labSections: data.lab_sections || []
+    };
+};
 
 const mapDischargeFromDB = (data: any): DischargedPatient => ({
     id: data.original_bed_id, 
@@ -55,7 +86,8 @@ const mapDischargeFromDB = (data: any): DischargedPatient => ({
 const mapEvolutionFromDB = (data: any): EvolutionNote => ({
     id: data.id,
     date: data.date,
-    doctor: data.doctor_name,
+    // FIX: Fallback to 'doctor' if 'doctor_name' doesn't exist to handle DB schema variations
+    doctor: data.doctor || data.doctor_name,
     subjective: data.subjective,
     objective: data.objective,
     assessment: data.assessment,
@@ -74,7 +106,7 @@ const mapLabResultFromDB = (data: any): LabResult => ({
     value: data.value ?? data.numeric_value, 
     textValue: data.text_value,
     unit: data.unit,
-    referenceRange: data.reference_range,
+    // Reference range removed
     isAbnormal: data.is_abnormal,
     fileName: data.file_name,
     fileUrl: data.file_url
@@ -228,7 +260,8 @@ export const createEvolution = async (note: EvolutionNote, patientId: string): P
     const { data, error } = await supabase.from('evolutions').insert([{
         patient_id: patientId,
         date: note.date,
-        doctor_name: note.doctor,
+        // FIX: Changed 'doctor_name' to 'doctor' to match likely DB schema
+        doctor: note.doctor,
         subjective: note.subjective,
         objective: note.objective,
         assessment: note.assessment,
@@ -243,7 +276,8 @@ export const updateEvolution = async (note: EvolutionNote): Promise<EvolutionNot
     if (!isDbConfigured || !supabase) return null;
     const { data, error } = await supabase.from('evolutions').update({
         date: note.date,
-        doctor_name: note.doctor,
+        // FIX: Changed 'doctor_name' to 'doctor'
+        doctor: note.doctor,
         subjective: note.subjective,
         objective: note.objective,
         assessment: note.assessment,
@@ -274,7 +308,7 @@ export const createLabResult = async (result: LabResult, patientId: string): Pro
         value: result.value, // Corrected
         text_value: result.textValue,
         unit: result.unit,
-        reference_range: result.referenceRange,
+        // reference_range removed
         is_abnormal: result.isAbnormal,
         file_name: result.fileName,
         file_url: result.fileUrl
@@ -293,7 +327,7 @@ export const updateLabResult = async (result: LabResult): Promise<LabResult | nu
         value: result.value, // Corrected
         text_value: result.textValue,
         unit: result.unit,
-        reference_range: result.referenceRange,
+        // reference_range removed
         is_abnormal: result.isAbnormal,
         file_name: result.fileName,
         file_url: result.fileUrl
@@ -360,6 +394,46 @@ export const updateAppointment = async (appt: Appointment): Promise<Appointment 
     }).eq('id', appt.id).select().single();
     if (error) throw error;
     return mapAppointmentFromDB(data);
+};
+
+/**
+ * Fetch daily appointments for a specific doctor, filtering out past times.
+ * Includes patient name join.
+ */
+export const fetchDoctorAppointmentsForToday = async (doctorName: string) => {
+    if (!isDbConfigured || !supabase) return [];
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get current time in HH:mm format for comparison
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+
+    const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+            *,
+            patients (full_name)
+        `)
+        .eq('date', today)
+        // Use ILIKE for case-insensitive matching of doctor name
+        .ilike('doctor', `%${doctorName}%`)
+        .eq('status', 'Programada')
+        // Only future appointments today
+        .gt('time', currentTime)
+        .order('time', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching daily appointments:", error);
+        return [];
+    }
+
+    return data.map((item: any) => ({
+        ...mapAppointmentFromDB(item),
+        patientName: item.patients?.full_name // Helper field for UI
+    }));
 };
 
 // --- PRESCRIPTION SERVICES ---
@@ -507,7 +581,7 @@ export const syncBedLabsToResults = async (patientId: string, labSections: LabSe
                     value: parsedValue || undefined, // undefined for mapper logic compatibility
                     textValue: textValue,
                     unit: parsedUnit,
-                    referenceRange: metric.reference || '',
+                    // reference removed
                     isAbnormal: metric.isAbnormal || false
                 } as LabResult, patientId);
             }
