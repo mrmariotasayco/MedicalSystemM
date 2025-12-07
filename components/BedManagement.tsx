@@ -36,15 +36,11 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
   }, []);
 
   // Filter beds based on selected pavilion
+  // IMPORTANT: Since dbService now calculates the pavilion name based on ID, simple string matching works perfectly.
   const filteredBeds = useMemo(() => {
       return beds
         .filter(bed => bed.pabellon === selectedPabellon)
-        .sort((a, b) => {
-            // Extract number from "Cama X" to sort numerically (1, 2, 10) instead of alphabetically (1, 10, 2)
-            const numA = parseInt(a.bedLabel?.replace(/\D/g, '') || '0');
-            const numB = parseInt(b.bedLabel?.replace(/\D/g, '') || '0');
-            return numA - numB;
-        });
+        .sort((a, b) => a.id - b.id); // Simple numeric sort by ID (1-384)
   }, [beds, selectedPabellon]);
 
   // Discharge Confirmation State
@@ -245,7 +241,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                     </select>
                                </div>
                               
-                              <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-2 w-full">
+                              <div className="flex-1 grid grid-cols-2 gap-2 w-full">
                                 <input 
                                     type="text" 
                                     placeholder="Métrica"
@@ -260,13 +256,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                     onChange={(e) => updateLabMetric(sIdx, mIdx, 'value', e.target.value)}
                                     className="p-2 border rounded text-xs w-full"
                                 />
-                                <input 
-                                    type="text" 
-                                    placeholder="Ref."
-                                    value={metric.reference || ''}
-                                    onChange={(e) => updateLabMetric(sIdx, mIdx, 'reference', e.target.value)}
-                                    className="p-2 border rounded text-xs w-full col-span-2 md:col-span-1"
-                                />
+                                {/* Reference Input Removed */}
                               </div>
                               <label className="flex items-center space-x-1 cursor-pointer mt-2 md:mt-2 shrink-0">
                                   <input 
@@ -346,16 +336,16 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                 </div>
                             </div>
                             <div className="grid grid-cols-12 bg-slate-50/50 px-4 py-1 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100">
-                                <div className="col-span-3">Examen</div>
-                                <div className="col-span-2">Categoría</div>
+                                <div className="col-span-4">Examen</div>
+                                <div className="col-span-3">Categoría</div>
                                 <div className="col-span-3">Resultado</div>
-                                <div className="col-span-2">Referencia</div>
+                                {/* Reference removed */}
                                 <div className="col-span-2 text-right">Estado</div>
                             </div>
                             <div className="p-0">
                                 {section.metrics?.map((metric, mIdx) => (
                                     <div key={mIdx} className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors items-center">
-                                        <div className="col-span-3">
+                                        <div className="col-span-4">
                                             <div className="text-xs text-slate-700 font-bold">{metric.name}</div>
                                             <div className={`text-[9px] px-1 py-0.5 rounded inline-block mt-0.5 ${
                                                 metric.type === 'qualitative' 
@@ -365,7 +355,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                                 {metric.type === 'qualitative' ? 'Cualit.' : 'Cuantit.'}
                                             </div>
                                         </div>
-                                        <div className="col-span-2">
+                                        <div className="col-span-3">
                                             <div className="flex items-center text-slate-500">
                                                 <Tag size={10} className="mr-1 opacity-50" />
                                                 <span className="text-[10px] font-medium">{metric.category || 'General'}</span>
@@ -375,9 +365,6 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                              <span className={`text-sm font-medium ${metric.isAbnormal ? 'text-red-600' : 'text-slate-800'} ${metric.type === 'qualitative' ? 'italic' : ''} break-words block`}>
                                                 {metric.value}
                                             </span>
-                                        </div>
-                                        <div className="col-span-2 text-xs text-slate-500">
-                                            {metric.reference || '-'}
                                         </div>
                                         <div className="col-span-2 text-right">
                                             {metric.isAbnormal ? (
@@ -465,7 +452,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
             filteredBeds.map((bed) => (
             <div key={bed.id} className={`relative rounded-xl border-2 transition-all duration-200 overflow-hidden group ${bed.status === 'occupied' ? 'bg-white border-red-100 hover:border-red-300 shadow-sm' : 'bg-emerald-50/30 border-emerald-100 hover:border-emerald-300 border-dashed'}`}>
                 <div className={`px-4 py-2 flex justify-between items-center text-sm font-bold ${bed.status === 'occupied' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                <span>{bed.bedLabel || `Cama ${bed.id}`}</span>
+                <span>{bed.bedLabel}</span>
                 {bed.status === 'occupied' ? <Activity size={16} /> : <CheckCircle2 size={16} />}
                 </div>
                 <div className="p-5 min-h-[160px] flex flex-col">
@@ -500,13 +487,13 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
       {/* BED DETAIL / EDIT MODAL */}
       {selectedBed && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto animate-fade-in flex flex-col">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto animate-fade-in flex flex-col my-8">
             
             <div className="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-start sticky top-0 z-20">
               <div className="flex items-start space-x-4">
                  <div className={`p-3 border rounded-xl shadow-sm text-center min-w-[100px] ${selectedBed.status === 'occupied' ? 'bg-white border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
                     <span className="block text-xs text-slate-400 font-bold uppercase">{selectedBed.pabellon || 'General'}</span>
-                    <span className={`block text-xl font-bold ${selectedBed.status === 'occupied' ? 'text-red-600' : 'text-emerald-600'}`}>{selectedBed.bedLabel || `Cama ${selectedBed.id}`}</span>
+                    <span className={`block text-xl font-bold ${selectedBed.status === 'occupied' ? 'text-red-600' : 'text-emerald-600'}`}>{selectedBed.bedLabel}</span>
                  </div>
                  <div>
                     {isEditing || selectedBed.status === 'available' ? (
@@ -522,7 +509,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
               <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={24} /></button>
             </div>
 
-            <div className="p-6 md:p-8 overflow-y-auto">
+            <div className="p-6 md:p-8 overflow-y-auto flex-1">
                 {isEditing ? (
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -717,8 +704,8 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
       )}
 
       {selectedHistoryItem && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-               <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in flex flex-col">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto">
+               <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in flex flex-col my-8">
                     <div className="p-6 border-b border-slate-200 bg-slate-100 flex justify-between items-start sticky top-0 z-10">
                          <div>
                             <div className="flex items-center space-x-2 text-slate-500 text-sm mb-1 uppercase font-bold tracking-wider"><History size={14} /> <span>Registro Histórico</span></div>
@@ -727,7 +714,7 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                          </div>
                          <button onClick={() => setSelectedHistoryItem(null)} className="p-2 hover:bg-slate-200 rounded-full"><X size={24} className="text-slate-500" /></button>
                     </div>
-                    <div className="p-8">{renderDetailContent(selectedHistoryItem)}</div>
+                    <div className="p-8 flex-1 overflow-y-auto">{renderDetailContent(selectedHistoryItem)}</div>
                </div>
           </div>
       )}
