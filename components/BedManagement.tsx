@@ -284,6 +284,40 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
 
   const renderDetailContent = (data: BedData | DischargedPatient) => (
     <div className="space-y-8">
+        
+        {/* NEW: HGT Section Display */}
+        {data.carePlan && (
+            <section>
+                <div className="flex items-center space-x-2 mb-4 text-rose-800">
+                    <Activity size={20} />
+                    <h4 className="text-lg font-bold">Monitoreo Hemoglucotest</h4>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center shadow-sm">
+                        <span className="block text-xs font-bold text-rose-400 uppercase tracking-wider mb-1">14:00</span>
+                        <div className="flex items-baseline justify-center">
+                            <span className="text-xl font-bold text-rose-700">{data.carePlan.hgt1400 || '--'}</span> 
+                            <span className="text-xs text-rose-500 ml-1">mg%</span>
+                        </div>
+                    </div>
+                    <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center shadow-sm">
+                        <span className="block text-xs font-bold text-rose-400 uppercase tracking-wider mb-1">22:00</span>
+                        <div className="flex items-baseline justify-center">
+                            <span className="text-xl font-bold text-rose-700">{data.carePlan.hgt2200 || '--'}</span> 
+                            <span className="text-xs text-rose-500 ml-1">mg%</span>
+                        </div>
+                    </div>
+                    <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 text-center shadow-sm">
+                        <span className="block text-xs font-bold text-rose-400 uppercase tracking-wider mb-1">06:00</span>
+                        <div className="flex items-baseline justify-center">
+                            <span className="text-xl font-bold text-rose-700">{data.carePlan.hgt0600 || '--'}</span> 
+                            <span className="text-xs text-rose-500 ml-1">mg%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        )}
+
         {/* 1. Resumen Clínico */}
         <section>
             <div className="flex items-center space-x-2 mb-4 text-blue-800">
@@ -603,32 +637,8 @@ export const BedManagement: React.FC<BedManagementProps> = ({ beds, patients, hi
                                     <input type="text" className="w-full p-2 border rounded text-sm" value={formData.carePlan?.hgt0600 || ''} onChange={e => updateCarePlan('hgt0600', e.target.value)} placeholder="mg%" />
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Catéter (No.)</label>
-                                    <input type="text" className="w-full p-2 border rounded text-sm" value={formData.carePlan?.catheterType || ''} onChange={e => updateCarePlan('catheterType', e.target.value)} />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Aguja (No.)</label>
-                                    <input type="text" className="w-full p-2 border rounded text-sm" value={formData.carePlan?.needleSize || ''} onChange={e => updateCarePlan('needleSize', e.target.value)} />
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-6 mt-4 p-3 bg-white rounded-lg border border-slate-100">
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={formData.carePlan?.venoclysis || false} onChange={e => updateCarePlan('venoclysis', e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                                    <span className="text-sm font-medium text-slate-700">Equipo Venoclisis</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={formData.carePlan?.tripleWayCode || false} onChange={e => updateCarePlan('tripleWayCode', e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                                    <span className="text-sm font-medium text-slate-700">Llave Triple Vía</span>
-                                </label>
-                                <label className="flex items-center space-x-2 cursor-pointer">
-                                    <input type="checkbox" checked={formData.carePlan?.microdropper || false} onChange={e => updateCarePlan('microdropper', e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
-                                    <span className="text-sm font-medium text-slate-700">Microgotero</span>
-                                </label>
-                            </div>
+                            
+                            {/* REMOVED: Catheter, Needle, Supplies inputs as requested */}
                         </div>
 
                         <div className="border-t border-slate-200 pt-6 mt-6">
