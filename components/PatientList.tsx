@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Patient, BedData, CarePlanData } from '../types';
-import { Search, UserPlus, Eye, Edit2, Trash2, Users, AlertTriangle, Bed, PlusCircle, X, Droplet, Calendar, Activity, Save, MapPin } from 'lucide-react';
+import { Search, UserPlus, Eye, Edit2, Trash2, Users, AlertTriangle, Bed, PlusCircle, X, Droplet, Calendar, Activity, Save, MapPin, Building } from 'lucide-react';
 
 interface PatientListProps {
   patients: Patient[];
@@ -29,6 +29,8 @@ export const PatientList: React.FC<PatientListProps> = ({
   // Assignment Flow State
   const [assigningPatient, setAssigningPatient] = useState<Patient | null>(null);
   const [selectedBedId, setSelectedBedId] = useState<number | null>(null);
+  // State for the new Dropdown logic
+  const [selectedPavilion, setSelectedPavilion] = useState<string>('');
   
   // New Care Plan Form State within Assignment
   const [carePlanForm, setCarePlanForm] = useState<CarePlanData>({
@@ -42,20 +44,22 @@ export const PatientList: React.FC<PatientListProps> = ({
     p.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const availableBeds = beds.filter(b => b.status === 'available');
+  const availableBeds = useMemo(() => beds.filter(b => b.status === 'available'), [beds]);
   
-  // Group available beds by Pavilion
-  const availableBedsByPavilion = useMemo(() => {
-    return availableBeds.reduce((acc, bed) => {
-        const key = bed.pabellon || 'Sin Pabellón';
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(bed);
-        return acc;
-    }, {} as Record<string, BedData[]>);
+  // 1. Get Unique Pavilions that have available beds
+  const availablePavilions = useMemo(() => {
+      const pavs = new Set(availableBeds.map(b => b.pabellon || 'General'));
+      // Sort logically (Pabellon 1 I, Pabellon 1 II, etc)
+      return Array.from(pavs).sort();
   }, [availableBeds]);
 
-  // Sort keys
-  const sortedPavilions = Object.keys(availableBedsByPavilion).sort();
+  // 2. Get Beds for Selected Pavilion
+  const availableBedsInPavilion = useMemo(() => {
+      if (!selectedPavilion) return [];
+      return availableBeds
+        .filter(b => (b.pabellon || 'General') === selectedPavilion)
+        .sort((a, b) => a.id - b.id);
+  }, [availableBeds, selectedPavilion]);
 
   const handleConfirmDelete = () => {
     if (patientToDelete) {
@@ -77,6 +81,7 @@ export const PatientList: React.FC<PatientListProps> = ({
           onAssignBed(assigningPatient, bedPayload);
           setAssigningPatient(null);
           setSelectedBedId(null);
+          setSelectedPavilion('');
           setCarePlanForm({
             hgt1400: '', hgt2200: '', hgt0600: '',
             catheterType: '', needleSize: '', nasogastricSonde: '', foleySonde: '', oxygenMode: '',
@@ -88,6 +93,7 @@ export const PatientList: React.FC<PatientListProps> = ({
   const cancelAssignment = () => {
       setAssigningPatient(null);
       setSelectedBedId(null);
+      setSelectedPavilion('');
   };
 
   return (
@@ -207,7 +213,7 @@ export const PatientList: React.FC<PatientListProps> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                         {assignedBedInfo ? (
                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                                <Bed size={12} className="mr-1" /> {assignedBedInfo.bedLabel || `Cama ${patient.bedId}`}
+                                <Bed size={12} className="mr-1" /> {assignedBedInfo.bedLabel}
                             </span>
                         ) : (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
@@ -299,7 +305,7 @@ export const PatientList: React.FC<PatientListProps> = ({
       {/* Assign Bed Wizard Modal */}
       {assigningPatient && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-fade-in">
                 <div className="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-10">
                      <div>
                         <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -338,40 +344,58 @@ export const PatientList: React.FC<PatientListProps> = ({
                         </div>
                     </div>
 
-                    {/* STEP 2: SELECT BED (GROUPED BY PAVILION) */}
+                    {/* STEP 2: SELECT BED (DROPDOWN LOGIC) */}
                     <div>
                         <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">2. Seleccionar Cama Disponible</h4>
-                        {sortedPavilions.length > 0 ? (
-                            <div className="space-y-6">
-                                {sortedPavilions.map(pavilion => (
-                                    <div key={pavilion} className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                        <h5 className="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span> {pavilion}
-                                        </h5>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                            {availableBedsByPavilion[pavilion].map(bed => (
-                                                <button
-                                                    key={bed.id}
-                                                    onClick={() => setSelectedBedId(bed.id)}
-                                                    className={`flex flex-col items-center justify-center p-3 border rounded-lg transition-all ${
-                                                        selectedBedId === bed.id 
-                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
-                                                        : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-600'
-                                                    }`}
-                                                >
-                                                    <span className="text-xs font-bold">{bed.bedLabel || `Cama ${bed.id}`}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* PAVILION SELECTOR */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Pabellón</label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedPavilion}
+                                        onChange={(e) => {
+                                            setSelectedPavilion(e.target.value);
+                                            setSelectedBedId(null); // Reset bed when pavilion changes
+                                        }}
+                                        className="w-full appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium disabled:bg-slate-100 disabled:text-slate-400"
+                                        disabled={availablePavilions.length === 0}
+                                    >
+                                        <option value="">-- Seleccionar Pabellón --</option>
+                                        {availablePavilions.map(pav => (
+                                            <option key={pav} value={pav}>{pav}</option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                                        <Building size={16} />
                                     </div>
-                                ))}
+                                </div>
+                                {availablePavilions.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">No hay pabellones con camas disponibles.</p>
+                                )}
                             </div>
-                        ) : (
-                            <div className="text-center py-4 bg-amber-50 rounded-lg border border-amber-200">
-                                <AlertTriangle size={24} className="mx-auto text-amber-500 mb-1" />
-                                <p className="text-slate-800 font-bold text-sm">No hay camas disponibles.</p>
+
+                            {/* BED SELECTOR (Dependent on Pavilion) */}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Cama</label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedBedId || ''}
+                                        onChange={(e) => setSelectedBedId(Number(e.target.value))}
+                                        className="w-full appearance-none bg-white border border-slate-300 text-slate-700 py-2.5 px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium disabled:bg-slate-100 disabled:text-slate-400"
+                                        disabled={!selectedPavilion}
+                                    >
+                                        <option value="">-- Seleccionar Cama --</option>
+                                        {availableBedsInPavilion.map(bed => (
+                                            <option key={bed.id} value={bed.id}>{bed.bedLabel}</option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                                        <Bed size={16} />
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
 
