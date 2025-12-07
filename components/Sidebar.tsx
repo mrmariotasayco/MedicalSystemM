@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClipboardList, Activity, FlaskConical, Stethoscope, User, LogOut, ArrowLeft, Settings } from 'lucide-react';
+import { ClipboardList, Activity, FlaskConical, Stethoscope, User, LogOut, ArrowLeft, Settings, UserCircle } from 'lucide-react';
 import { ViewState } from '../types';
 
 interface SidebarProps {
@@ -20,8 +20,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onL
   ];
 
   return (
-    <div className="flex flex-col w-64 bg-slate-900 text-slate-100 h-screen transition-all">
-      <div className="p-6 border-b border-slate-800 flex items-center space-x-3">
+    <div className="flex flex-col w-64 bg-slate-900 text-slate-100 h-screen overflow-y-auto transition-all">
+      <div className="p-6 border-b border-slate-800 flex items-center space-x-3 sticky top-0 bg-slate-900 z-10">
         <div className="p-2 bg-blue-600 rounded-lg shrink-0">
             <Stethoscope size={24} className="text-white" />
         </div>
@@ -38,10 +38,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onL
         </button>
 
         {patientName && (
-            <div className="px-4 py-2 mb-4 bg-slate-800 rounded-lg">
-                <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Paciente Actual</span>
-                <p className="font-medium text-white truncate text-sm mt-1">{patientName}</p>
-            </div>
+            <button 
+                onClick={() => onChangeView('affiliation')}
+                className={`w-full text-left px-4 py-3 mb-4 rounded-lg transition-all group border ${
+                    currentView === 'affiliation' 
+                    ? 'bg-blue-900/30 border-blue-500/50' 
+                    : 'bg-slate-800 border-transparent hover:border-slate-600 hover:bg-slate-750'
+                }`}
+                title="Ver Datos de Filiación"
+            >
+                <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider group-hover:text-blue-400 transition-colors">Paciente Actual</span>
+                    <UserCircle size={14} className="text-slate-500 group-hover:text-blue-400" />
+                </div>
+                <p className="font-bold text-white truncate text-sm">{patientName}</p>
+                <p className="text-[10px] text-slate-500 mt-1 group-hover:text-slate-400">Clic para ver datos de filiación</p>
+            </button>
         )}
       </div>
 
@@ -66,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, onL
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-800 mt-auto">
         <div 
             onClick={onOpenProfile}
             className="flex items-center space-x-3 px-4 py-3 text-slate-400 bg-slate-800/50 hover:bg-slate-800 rounded-lg mb-2 cursor-pointer transition-colors group relative"
