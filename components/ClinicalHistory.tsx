@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Patient, Appointment, Prescription, MedicationItem, CarePlanData, BedData } from '../types';
-import { User, Calendar, Droplet, AlertTriangle, FileText, Phone, Sparkles, Clock, CalendarPlus, X, Save, History, CheckCircle2, FileDown, Printer, MapPin, Edit2, Ban, UserCog, Bed, Pill, Plus, Trash2, Lock, Activity } from 'lucide-react';
+import { User, Calendar, Droplet, AlertTriangle, FileText, Phone, Sparkles, Clock, CalendarPlus, X, Save, History, CheckCircle2, FileDown, Printer, MapPin, Edit2, Ban, UserCog, Bed, Pill, Plus, Trash2, Lock, Activity, Eye } from 'lucide-react';
 import { generateClinicalRecommendations } from '../services/geminiService';
 import { UserProfile } from '../services/authService';
 
@@ -25,7 +25,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
     assignedBed,
     onAddAppointment, 
     onUpdateAppointment, 
-    onAddPrescription,
+    onAddPrescription, 
     onDeletePrescription,
     onEditPatientProfile 
 }) => {
@@ -34,6 +34,9 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
   const [editingApptId, setEditingApptId] = useState<string | null>(null);
   const [apptToCancel, setApptToCancel] = useState<Appointment | null>(null);
+  
+  // New state for viewing appointment detail
+  const [viewingAppt, setViewingAppt] = useState<Appointment | null>(null);
 
   // Prescription UI State
   const [isPrescFormOpen, setIsPrescFormOpen] = useState(false);
@@ -44,15 +47,6 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
     const [year, month, day] = dateStr.split('-').map(Number);
     const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-  };
-
-  // Helper for 24h Lock
-  const isEditable = (dateStr?: string) => {
-      if (!dateStr) return true;
-      const created = new Date(dateStr);
-      const now = new Date();
-      const diffMs = now.getTime() - created.getTime();
-      return (diffMs / (1000 * 60 * 60)) < 24;
   };
 
   // Separate appointments
@@ -520,7 +514,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                     </span>
                 ) : null}
             </div>
-            <p className="text-slate-500">Resumen general y datos demográficos del paciente.</p>
+            <p className="text-slate-500">Gestión de citas, recetas y análisis clínico.</p>
         </div>
         <button 
             onClick={handleOpenAddForm}
@@ -566,64 +560,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-6 text-white">
-             <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                    <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30">
-                        <User size={32} />
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-bold">{patient.name}</h3>
-                        <p className="opacity-70 text-sm">ID Paciente: {patient.id}</p>
-                    </div>
-                </div>
-                <button onClick={onEditPatientProfile} className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white flex items-center space-x-2">
-                    <UserCog size={20} />
-                    <span className="text-sm font-medium hidden md:inline">Editar Perfil</span>
-                </button>
-            </div>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-start space-x-3">
-                <Calendar className="text-blue-500 mt-1" size={20} />
-                <div><p className="text-sm text-slate-500">Fecha de Nacimiento</p><p className="font-semibold text-slate-800">{patient.dob}</p></div>
-            </div>
-            <div className="flex items-start space-x-3">
-                <User className="text-blue-500 mt-1" size={20} />
-                <div><p className="text-sm text-slate-500">Género</p><p className="font-semibold text-slate-800">{patient.gender}</p></div>
-            </div>
-            <div className="flex items-start space-x-3">
-                <Droplet className="text-red-500 mt-1" size={20} />
-                <div><p className="text-sm text-slate-500">Grupo Sanguíneo</p><p className="font-semibold text-slate-800">{patient.bloodType}</p></div>
-            </div>
-            <div className="flex items-start space-x-3">
-                <Phone className="text-green-500 mt-1" size={20} />
-                <div><p className="text-sm text-slate-500">Contacto</p><p className="font-semibold text-slate-800">{patient.contact}</p></div>
-            </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div className="flex items-center space-x-2 mb-4"><AlertTriangle className="text-amber-500" /><h4 className="text-lg font-bold text-slate-800">Alergias Conocidas</h4></div>
-            <div className="flex flex-wrap gap-2">
-                {patient.allergies.length > 0 ? patient.allergies.map((allergy, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-sm font-medium">{allergy}</span>
-                )) : <span className="text-slate-400 italic text-sm">No registra alergias.</span>}
-            </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <div className="flex items-center space-x-2 mb-4"><FileText className="text-blue-500" /><h4 className="text-lg font-bold text-slate-800">Antecedentes Patológicos</h4></div>
-            <ul className="space-y-2">
-                {patient.chronicConditions.length > 0 ? patient.chronicConditions.map((condition, idx) => (
-                    <li key={idx} className="flex items-center text-slate-700"><span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>{condition}</li>
-                )) : <li className="text-slate-400 italic text-sm">No registra enfermedades crónicas.</li>}
-            </ul>
-        </div>
-      </div>
-      
-      {/* RESTORED APPOINTMENTS SECTION */}
+      {/* APPOINTMENTS SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex justify-between items-center">
               <div className="flex items-center space-x-2">
@@ -653,6 +590,9 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                               </div>
                           </div>
                           <div className="flex space-x-1">
+                               <button onClick={() => setViewingAppt(appt)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Ver Detalle">
+                                  <Eye size={16} />
+                               </button>
                                <button onClick={() => handleDownloadAppointmentPDF(appt)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg" title="Imprimir Ticket">
                                   <Printer size={16} />
                               </button>
@@ -689,6 +629,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
           </div>
       </div>
       
+      {/* PRESCRIPTIONS SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 border-b border-slate-200 bg-emerald-50/50 flex justify-between items-center">
               <div className="flex items-center space-x-2">
@@ -811,8 +752,6 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                             />
                        </div>
 
-                       {/* NOTE: Care Plan inputs removed as requested. Data flows from bed to PDF directly. */}
-
                        <div className="border-t border-slate-200 pt-4">
                            <div className="flex justify-between items-center mb-3">
                                <h4 className="font-bold text-slate-700">Medicamentos e Indicaciones</h4>
@@ -874,15 +813,15 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
            </div>
        )}
 
-       {/* Appointment Modal */}
+       {/* Appointment Modal (Edit/Create) */}
        {isApptFormOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-fade-in flex flex-col">
-                <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] animate-fade-in flex flex-col">
+                <div className="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-10">
                     <h2 className="text-xl font-bold text-slate-800">{editingApptId ? 'Editar Cita' : 'Nueva Cita'}</h2>
                     <button onClick={() => setIsApptFormOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
                 </div>
-                <form onSubmit={handleApptSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleApptSubmit} className="p-6 space-y-4 overflow-y-auto">
                     <div className="grid grid-cols-2 gap-4">
                          <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Fecha</label>
@@ -917,6 +856,62 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                         <Save size={18} className="mr-2" /> {editingApptId ? 'Actualizar' : 'Guardar'}
                     </button>
                 </form>
+            </div>
+        </div>
+       )}
+
+       {/* Appointment DETAIL Modal (Read Only) */}
+       {viewingAppt && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg animate-fade-in flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 sticky top-0 rounded-t-xl z-10">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Calendar className="text-blue-600" /> Detalle de Cita</h2>
+                    <button onClick={() => setViewingAppt(null)} className="text-slate-400 hover:text-slate-600"><X size={24} /></button>
+                </div>
+                <div className="p-8 space-y-6 overflow-y-auto">
+                    <div className="flex justify-center mb-4">
+                         <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                             <Clock size={32} />
+                         </div>
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-2xl font-bold text-slate-800">{formatDate(viewingAppt.date)}</h3>
+                        <p className="text-xl text-blue-600 font-bold">{viewingAppt.time} hrs</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-6">
+                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Paciente</label>
+                             <div className="font-semibold text-slate-800">{patient.name}</div>
+                         </div>
+                         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estado</label>
+                             <div className={`font-bold ${viewingAppt.status === 'Programada' ? 'text-blue-600' : viewingAppt.status === 'Completada' ? 'text-green-600' : 'text-red-600'}`}>{viewingAppt.status}</div>
+                         </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Médico Tratante</label>
+                             <div className="flex items-center gap-2 text-slate-800">
+                                 <User size={16} /> <span>{viewingAppt.doctor}</span>
+                             </div>
+                        </div>
+                        <div>
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo de Consulta</label>
+                             <div className="text-slate-700 bg-white border border-slate-100 p-3 rounded-lg italic">"{viewingAppt.reason}"</div>
+                        </div>
+                        <div>
+                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ubicación</label>
+                             <div className="flex items-center gap-2 text-slate-800">
+                                 <MapPin size={16} /> <span>{viewingAppt.location || 'No especificada'}</span>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-6 border-t border-slate-200 bg-slate-50 flex justify-end rounded-b-xl">
+                    <button onClick={() => setViewingAppt(null)} className="px-5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-100 font-medium shadow-sm">Cerrar</button>
+                </div>
             </div>
         </div>
        )}
