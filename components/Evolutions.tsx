@@ -8,9 +8,10 @@ interface EvolutionsProps {
   onAddEvolution: (note: EvolutionNote) => void;
   onUpdateEvolution: (note: EvolutionNote) => void;
   onDeleteEvolution: (id: string) => void;
+  doctorName?: string; // New prop for auto-fill
 }
 
-export const Evolutions: React.FC<EvolutionsProps> = ({ evolutions, onAddEvolution, onUpdateEvolution, onDeleteEvolution }) => {
+export const Evolutions: React.FC<EvolutionsProps> = ({ evolutions, onAddEvolution, onUpdateEvolution, onDeleteEvolution, doctorName }) => {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   
@@ -60,7 +61,7 @@ export const Evolutions: React.FC<EvolutionsProps> = ({ evolutions, onAddEvoluti
     setFormData({
         date: new Date().toISOString().split('T')[0],
         severity: 'Baja',
-        doctor: '',
+        doctor: doctorName || '', // Auto-fill if available
         subjective: '',
         objective: '',
         assessment: '',
