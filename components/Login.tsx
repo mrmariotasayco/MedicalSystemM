@@ -254,7 +254,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors bg-slate-50 focus:bg-white"
-                  placeholder={isRegistering ? "correo@ejemplo.com" : "admin"}
+                  placeholder={isRegistering ? "correo@ejemplo.com" : "correo@ejemplo.com"}
                   disabled={loading}
                 />
               </div>
