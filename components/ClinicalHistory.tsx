@@ -496,8 +496,9 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm -mx-4 px-4 md:-mx-8 md:px-8 pt-4 pb-4 border-b border-slate-200 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-sm">
         <div>
             <div className="flex items-center gap-3">
                 <h2 className="text-3xl font-bold text-slate-800">Historia Clínica</h2>
@@ -514,11 +515,11 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                     </span>
                 ) : null}
             </div>
-            <p className="text-slate-500">Gestión de citas, recetas y análisis clínico.</p>
+            <p className="text-slate-500 text-sm md:text-base">Gestión de citas, recetas y análisis clínico.</p>
         </div>
         <button 
             onClick={handleOpenAddForm}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm transition-colors"
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm transition-colors whitespace-nowrap"
         >
             <CalendarPlus size={18} />
             <span>Agendar Cita</span>
@@ -562,7 +563,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
 
       {/* APPOINTMENTS SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex justify-between items-center">
+          <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10">
               <div className="flex items-center space-x-2">
                   <Calendar className="text-blue-600" size={20} />
                   <h4 className="text-slate-800 font-bold">Citas Médicas</h4>
@@ -571,40 +572,44 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
           <div className="p-4">
               {/* Upcoming */}
               <h5 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Próximas</h5>
-              <div className="space-y-3 mb-6">
-                  {upcomingAppointments.length > 0 ? upcomingAppointments.map(appt => (
-                      <div key={appt.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors">
-                          <div className="flex items-center space-x-4">
-                              <div className="text-center min-w-[60px]">
-                                  <span className="block text-xl font-bold text-blue-600">{appt.time}</span>
-                                  <span className="text-xs text-slate-500">{formatDate(appt.date)}</span>
-                              </div>
-                              <div className="h-8 w-px bg-slate-200"></div>
-                              <div>
-                                  <p className="font-bold text-slate-800">{appt.reason}</p>
-                                  <div className="flex items-center text-xs text-slate-500">
-                                      <User size={12} className="mr-1" /> {appt.doctor}
-                                      <span className="mx-2">•</span>
-                                      <MapPin size={12} className="mr-1" /> {appt.location}
+              
+              {/* Horizontal Scroll Container */}
+              <div className="overflow-x-auto pb-4 -mx-2 px-2">
+                  <div className="min-w-[700px] space-y-3 mb-6">
+                      {upcomingAppointments.length > 0 ? upcomingAppointments.map(appt => (
+                          <div key={appt.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors">
+                              <div className="flex items-center space-x-4">
+                                  <div className="text-center min-w-[60px]">
+                                      <span className="block text-xl font-bold text-blue-600">{appt.time}</span>
+                                      <span className="text-xs text-slate-500">{formatDate(appt.date)}</span>
+                                  </div>
+                                  <div className="h-8 w-px bg-slate-200"></div>
+                                  <div>
+                                      <p className="font-bold text-slate-800">{appt.reason}</p>
+                                      <div className="flex items-center text-xs text-slate-500">
+                                          <User size={12} className="mr-1" /> {appt.doctor}
+                                          <span className="mx-2">•</span>
+                                          <MapPin size={12} className="mr-1" /> {appt.location}
+                                      </div>
                                   </div>
                               </div>
+                              <div className="flex space-x-2">
+                                   <button onClick={() => setViewingAppt(appt)} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100" title="Ver Detalle">
+                                      <Eye size={16} />
+                                   </button>
+                                   <button onClick={() => handleDownloadAppointmentPDF(appt)} className="p-2 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200" title="Imprimir Ticket">
+                                      <Printer size={16} />
+                                  </button>
+                                  <button onClick={() => handleOpenEditForm(appt)} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-100" title="Editar">
+                                      <Edit2 size={16} />
+                                  </button>
+                                  <button onClick={() => initiateCancel(appt)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-100" title="Cancelar/Eliminar">
+                                      <Ban size={16} />
+                                  </button>
+                              </div>
                           </div>
-                          <div className="flex space-x-1">
-                               <button onClick={() => setViewingAppt(appt)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Ver Detalle">
-                                  <Eye size={16} />
-                               </button>
-                               <button onClick={() => handleDownloadAppointmentPDF(appt)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg" title="Imprimir Ticket">
-                                  <Printer size={16} />
-                              </button>
-                              <button onClick={() => handleOpenEditForm(appt)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
-                                  <Edit2 size={16} />
-                              </button>
-                              <button onClick={() => initiateCancel(appt)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Cancelar/Eliminar">
-                                  <Ban size={16} />
-                              </button>
-                          </div>
-                      </div>
-                  )) : <p className="text-sm text-slate-400 italic">No hay citas próximas programadas.</p>}
+                      )) : <p className="text-sm text-slate-400 italic">No hay citas próximas programadas.</p>}
+                  </div>
               </div>
 
               {/* Past */}
@@ -631,7 +636,7 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
       
       {/* PRESCRIPTIONS SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 bg-emerald-50/50 flex justify-between items-center">
+          <div className="p-4 border-b border-slate-200 bg-emerald-50/50 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10">
               <div className="flex items-center space-x-2">
                   <Pill className="text-emerald-600" size={20} />
                   <h4 className="text-slate-800 font-bold">Recetas Médicas</h4>
@@ -760,8 +765,8 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                                </button>
                            </div>
                            
-                           {/* HEADER FOR MEDS */}
-                           <div className="grid grid-cols-12 gap-2 mb-2 text-xs font-bold text-slate-500 uppercase px-2">
+                           {/* HEADER FOR MEDS - Hidden on Mobile */}
+                           <div className="hidden md:grid grid-cols-12 gap-2 mb-2 text-xs font-bold text-slate-500 uppercase px-2">
                                <div className="col-span-3">Medicamento (DCI)</div>
                                <div className="col-span-2">Dosis</div>
                                <div className="col-span-2">Frecuencia</div>
@@ -772,37 +777,49 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
                            </div>
 
                            {prescForm.medications.map((med, idx) => (
-                               <div key={idx} className="grid grid-cols-12 gap-2 mb-2 items-start bg-slate-50 p-2 rounded border border-slate-100">
-                                   <div className="col-span-3">
-                                       <input placeholder="Nombre Genérico" className="w-full p-1.5 border rounded text-sm" value={med.name} onChange={e => updateMedication(idx, 'name', e.target.value)} />
+                               <div key={idx} className="flex flex-col md:grid md:grid-cols-12 gap-2 mb-4 md:mb-2 items-start bg-slate-50 p-3 md:p-2 rounded border border-slate-100 shadow-sm md:shadow-none">
+                                   <div className="w-full md:col-span-3">
+                                       <label className="md:hidden text-xs font-bold text-slate-500 mb-1 block">Medicamento (DCI)</label>
+                                       <input placeholder="Nombre Genérico" className="w-full p-1.5 border rounded text-sm font-bold md:font-normal" value={med.name} onChange={e => updateMedication(idx, 'name', e.target.value)} />
                                    </div>
-                                   <div className="col-span-2">
-                                       <input placeholder="500mg" className="w-full p-1.5 border rounded text-sm" value={med.dosage} onChange={e => updateMedication(idx, 'dosage', e.target.value)} />
-                                   </div>
-                                   <div className="col-span-2">
-                                       <input placeholder="C/8H" className="w-full p-1.5 border rounded text-sm" value={med.frequency} onChange={e => updateMedication(idx, 'frequency', e.target.value)} />
-                                   </div>
-                                   <div className="col-span-1">
-                                       <select className="w-full p-1.5 border rounded text-sm" value={med.route} onChange={e => updateMedication(idx, 'route', e.target.value)}>
-                                            <option value="VO">VO</option><option value="EV">EV</option><option value="IM">IM</option><option value="SC">SC</option><option value="SL">SL</option><option value="TOP">TOP</option>
-                                        </select>
-                                   </div>
-                                   <div className="col-span-2">
-                                       <select className="w-full p-1.5 border rounded text-sm" value={med.form} onChange={e => updateMedication(idx, 'form', e.target.value)}>
-                                            <option value="TAB">TAB (Tableta)</option><option value="CAP">CAP (Cápsula)</option><option value="JBE">JBE (Jarabe)</option><option value="AMP">AMP (Ampolla)</option><option value="FCO">FCO (Frasco)</option><option value="UNG">UNG (Ungüento)</option><option value="SOL">SOL (Solución)</option>
-                                        </select>
-                                   </div>
-                                   <div className="col-span-1">
-                                       <input placeholder="01" className="w-full p-1.5 border rounded text-sm text-center" value={med.totalQuantity} onChange={e => updateMedication(idx, 'totalQuantity', e.target.value)} />
-                                   </div>
-                                   <div className="col-span-1 flex justify-center">
-                                       <button type="button" onClick={() => removeMedication(idx)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={16} /></button>
+                                   
+                                   {/* Group small inputs for mobile flow */}
+                                   <div className="w-full md:col-span-9 grid grid-cols-2 md:grid-cols-9 gap-2">
+                                        <div className="md:col-span-2">
+                                            <label className="md:hidden text-xs font-bold text-slate-500 mb-1 block">Dosis</label>
+                                            <input placeholder="500mg" className="w-full p-1.5 border rounded text-sm" value={med.dosage} onChange={e => updateMedication(idx, 'dosage', e.target.value)} />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="md:hidden text-xs font-bold text-slate-500 mb-1 block">Frecuencia</label>
+                                            <input placeholder="C/8H" className="w-full p-1.5 border rounded text-sm" value={med.frequency} onChange={e => updateMedication(idx, 'frequency', e.target.value)} />
+                                        </div>
+                                        <div className="md:col-span-1">
+                                            <label className="md:hidden text-xs font-bold text-slate-500 mb-1 block">V.A.</label>
+                                            <select className="w-full p-1.5 border rounded text-sm" value={med.route} onChange={e => updateMedication(idx, 'route', e.target.value)}>
+                                                    <option value="VO">VO</option><option value="EV">EV</option><option value="IM">IM</option><option value="SC">SC</option><option value="SL">SL</option><option value="TOP">TOP</option>
+                                                </select>
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="md:hidden text-xs font-bold text-slate-500 mb-1 block">Forma</label>
+                                            <select className="w-full p-1.5 border rounded text-sm" value={med.form} onChange={e => updateMedication(idx, 'form', e.target.value)}>
+                                                    <option value="TAB">TAB (Tableta)</option><option value="CAP">CAP (Cápsula)</option><option value="JBE">JBE (Jarabe)</option><option value="AMP">AMP (Ampolla)</option><option value="FCO">FCO (Frasco)</option><option value="UNG">UNG (Ungüento)</option><option value="SOL">SOL (Solución)</option>
+                                                </select>
+                                        </div>
+                                        <div className="md:col-span-1">
+                                            <label className="md:hidden text-xs font-bold text-slate-500 mb-1 block">Cant.</label>
+                                            <input placeholder="01" className="w-full p-1.5 border rounded text-sm text-center" value={med.totalQuantity} onChange={e => updateMedication(idx, 'totalQuantity', e.target.value)} />
+                                        </div>
+                                        <div className="md:col-span-1 flex items-end justify-center pb-1">
+                                            <button type="button" onClick={() => removeMedication(idx)} className="p-1.5 text-slate-400 hover:text-red-500 bg-white border border-slate-200 md:border-none rounded md:bg-transparent shadow-sm md:shadow-none w-full md:w-auto flex justify-center items-center gap-2 md:gap-0">
+                                                <Trash2 size={16} /> <span className="md:hidden text-xs">Eliminar</span>
+                                            </button>
+                                        </div>
                                    </div>
                                </div>
                            ))}
                        </div>
 
-                       <div className="pt-6 flex justify-end gap-3">
+                       <div className="pt-6 flex justify-end gap-3 sticky bottom-0 bg-white border-t border-slate-100 p-4 -mx-6 -mb-6 md:static md:p-0 md:mx-0 md:mb-0 md:border-t-0">
                            <button type="button" onClick={() => setIsPrescFormOpen(false)} className="px-4 py-2 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
                            <button type="submit" className="px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors flex items-center shadow-md">
                                <Save size={18} className="mr-2" /> Guardar Receta
