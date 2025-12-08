@@ -10,7 +10,7 @@ import { BedManagement } from './components/BedManagement';
 import { AffiliationData } from './components/AffiliationData';
 import { UserProfileModal } from './components/UserProfileModal'; 
 import { Patient, EvolutionNote, LabResult, ViewState, Appointment, BedData, DischargedPatient, LabSection, Prescription, LabMetric } from './types';
-import { Menu, LogOut, Stethoscope, Loader2, Settings, X, Calendar, Clock, MapPin, ArrowRight, Activity, Heart } from 'lucide-react';
+import { Menu, LogOut, Stethoscope, Loader2, Settings, X, Calendar, Clock, MapPin, ArrowRight, Activity, Heart, ArrowLeft } from 'lucide-react';
 import { UserProfile, signOut, getCurrentSession, updateUserProfile, deleteUserAccount } from './services/authService';
 
 // Import Database Services
@@ -653,7 +653,7 @@ export function App() {
     return (
       <div className="min-h-screen bg-slate-50">
         {/* Simple Navbar for Dashboard */}
-        <nav className="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-10">
+        <nav className="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-[60]">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-blue-600 rounded">
@@ -788,12 +788,22 @@ export function App() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
-        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center z-20">
-             <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-blue-600 rounded">
-                    <Stethoscope size={20} />
+        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center z-20 sticky top-0">
+             <div className="flex items-center space-x-3">
+                {selectedPatient && (
+                    <button 
+                        onClick={() => setSelectedPatient(null)} 
+                        className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                    >
+                        <ArrowLeft size={22} />
+                    </button>
+                )}
+                <div className="flex items-center space-x-2">
+                    <div className="p-1.5 bg-blue-600 rounded">
+                        <Stethoscope size={20} />
+                    </div>
+                    <span className="text-lg font-bold">MedicalMarioLT</span>
                 </div>
-                <span className="text-lg font-bold">MedicalMarioLT</span>
             </div>
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-300">
                 <Menu />
