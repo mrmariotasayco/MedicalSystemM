@@ -254,7 +254,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-colors bg-slate-50 focus:bg-white"
-                  placeholder={isRegistering ? "correo@ejemplo.com" : "correo@ejemplo.com"}
+                  placeholder={isRegistering ? "correo@ejemplo.com" : "admin"}
                   disabled={loading}
                 />
               </div>
@@ -353,7 +353,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           <div className="mt-8 text-center">
-            <p className="text-xs text-slate-400">© 2025 - 2035 MedicalMarioLT | Seguridad SHA-256</p>
+            <p className="text-xs text-slate-400">© 2024 MedicalMarioLT | Seguridad SHA-256</p>
           </div>
         </div>
       </div>
