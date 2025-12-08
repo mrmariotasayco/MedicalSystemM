@@ -10,10 +10,10 @@ interface AffiliationDataProps {
 export const AffiliationData: React.FC<AffiliationDataProps> = ({ patient, onEditPatientProfile }) => {
   return (
     <div className="space-y-6 animate-fade-in">
-      <header className="mb-4">
+      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm -mx-4 px-4 md:-mx-8 md:px-8 pt-4 pb-2 border-b border-slate-200 mb-6 shadow-sm transition-all">
         <h2 className="text-3xl font-bold text-slate-800">Datos de Filiación</h2>
         <p className="text-slate-500">Información demográfica y antecedentes del paciente.</p>
-      </header>
+      </div>
 
       {/* Patient Header Card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
