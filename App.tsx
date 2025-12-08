@@ -784,3 +784,113 @@ export function App() {
     </div>
   );
 }
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+        {/* Mobile Header */}
+        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center z-20 sticky top-0">
+             <div className="flex items-center space-x-3">
+                {selectedPatient && (
+                    <button 
+                        onClick={() => setSelectedPatient(null)} 
+                        className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                    >
+                        <ArrowLeft size={22} />
+                    </button>
+                )}
+                <div className="flex items-center space-x-2">
+                    <div className="p-1.5 bg-blue-600 rounded">
+                        <Stethoscope size={20} />
+                    </div>
+                    <span className="text-lg font-bold">MedicalMarioLT</span>
+                </div>
+            </div>
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-300">
+                <Menu />
+            </button>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar Desktop */}
+            <div className="hidden md:block">
+                <Sidebar 
+                    currentView={view} 
+                    onChangeView={setView} 
+                    onLogout={handleLogout}
+                    onBackToDashboard={() => setSelectedPatient(null)}
+                    onOpenProfile={() => setIsProfileOpen(true)}
+                    patientName={selectedPatient.name}
+                    doctorName={currentUser.fullName}
+                />
+            </div>
+            
+            {/* Sidebar Mobile */}
+            {isMobileMenuOpen && (
+                <div className="absolute inset-0 z-50 bg-slate-900/95 md:hidden transition-all">
+                    <div className="flex justify-end p-4">
+                        <button onClick={() => setIsMobileMenuOpen(false)} className="text-white p-2">
+                            <X size={24} />
+                        </button>
+                    </div>
+                     <Sidebar 
+                        currentView={view} 
+                        onChangeView={(v) => { setView(v); setIsMobileMenuOpen(false); }} 
+                        onLogout={handleLogout}
+                        onBackToDashboard={() => { setSelectedPatient(null); setIsMobileMenuOpen(false); }}
+                        onOpenProfile={() => { setIsProfileOpen(true); setIsMobileMenuOpen(false); }}
+                        patientName={selectedPatient.name}
+                        doctorName={currentUser.fullName}
+                    />
+                </div>
+            )}
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto bg-slate-50 p-4 md:p-8 relative">
+                 <div className="max-w-6xl mx-auto">
+                    {renderContent()}
+                 </div>
+            </div>
+        </div>
+
+        {isFormOpen && (
+          <PatientForm 
+            initialData={editingPatient}
+            onSubmit={editingPatient ? handleUpdatePatient : handleCreatePatient}
+            onCancel={() => setIsFormOpen(false)}
+          />
+        )}
+
+         {/* Profile Modal */}
+        {isProfileOpen && (
+            <UserProfileModal 
+                user={currentUser} 
+                onClose={() => setIsProfileOpen(false)}
+                onSave={handleUpdateProfile}
+                onDelete={handleDeleteAccount}
+            />
+        )}
+
+        {/* LOADING OVERLAY (Global) */}
+        {isLoading && (
+            <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center animate-fade-in">
+                <div className="relative mb-8">
+                    {/* Pulsing ring */}
+                    <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+                    <div className="absolute inset-2 bg-blue-400 rounded-full animate-ping opacity-30 animation-delay-300"></div>
+                    
+                    {/* Central Icon */}
+                    <div className="relative bg-white p-8 rounded-full shadow-2xl border-4 border-blue-50 flex items-center justify-center">
+                        <Activity size={64} className="text-blue-600" />
+                    </div>
+                </div>
+                
+                <h2 className="text-3xl font-bold text-slate-800 tracking-tight">MedicalMarioLT</h2>
+                <p className="text-slate-500 mt-3 font-medium flex items-center bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                    <Loader2 size={16} className="animate-spin mr-2 text-blue-600" />
+                    Preparando entorno clínico...
+                </p>
+            </div>
+        )}
+    </div>
+  );
+}
