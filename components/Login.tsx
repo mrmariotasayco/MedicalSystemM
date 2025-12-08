@@ -353,7 +353,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           <div className="mt-8 text-center">
-            <p className="text-xs text-slate-400">© 2024 MedicalMarioLT | Seguridad SHA-256</p>
+            <p className="text-xs text-slate-400">© 2025 - 2035 MedicalMarioLT | Seguridad SHA-256</p>
           </div>
         </div>
       </div>
