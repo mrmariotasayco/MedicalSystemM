@@ -497,34 +497,40 @@ export const ClinicalHistory: React.FC<ClinicalHistoryProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm -mx-4 px-4 md:-mx-8 md:px-8 pt-4 pb-4 border-b border-slate-200 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-sm">
-        <div>
-            <div className="flex items-center gap-3">
-                <h2 className="text-3xl font-bold text-slate-800">Historia Clínica</h2>
-                {/* BED INDICATOR */}
-                {assignedBed ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
-                        <Bed size={16} />
-                        {assignedBed.pabellon} - {assignedBed.bedLabel}
-                    </span>
-                ) : patient.bedId ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
-                        <Bed size={16} />
-                        Cama {patient.bedId}
-                    </span>
-                ) : null}
+      {/* Sticky Header - Title & Info ONLY (Buttons moved out) */}
+      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm -mx-4 px-4 md:-mx-8 md:px-8 pt-4 pb-2 border-b border-slate-200 mb-6 transition-all shadow-sm">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-3xl font-bold text-slate-800">Historia Clínica</h2>
+                    {/* BED INDICATOR */}
+                    {assignedBed ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
+                            <Bed size={16} />
+                            {assignedBed.pabellon} - {assignedBed.bedLabel}
+                        </span>
+                    ) : patient.bedId ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-sm animate-fade-in">
+                            <Bed size={16} />
+                            Cama {patient.bedId}
+                        </span>
+                    ) : null}
+                </div>
+                <p className="text-slate-500 text-sm md:text-base">Gestión de citas, recetas y análisis clínico.</p>
             </div>
-            <p className="text-slate-500 text-sm md:text-base">Gestión de citas, recetas y análisis clínico.</p>
         </div>
-        <button 
+      </div>
+
+      {/* Action Buttons Row (Not Sticky) */}
+      <div className="flex justify-end -mt-4 mb-6">
+          <button 
             onClick={handleOpenAddForm}
             className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm transition-colors whitespace-nowrap"
         >
             <CalendarPlus size={18} />
             <span>Agendar Cita</span>
         </button>
-      </header>
+      </div>
 
       {/* AI NOTE & ALERTS */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6 relative overflow-hidden">
