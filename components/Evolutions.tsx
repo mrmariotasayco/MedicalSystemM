@@ -122,14 +122,12 @@ export const Evolutions: React.FC<EvolutionsProps> = ({ evolutions, onAddEvoluti
 
   return (
     <div className="space-y-6">
-      {/* Sticky Header - Title Only */}
-      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm -mx-4 px-4 md:-mx-8 md:px-8 pt-4 pb-2 border-b border-slate-200 mb-4 shadow-sm transition-all">
-        <h2 className="text-3xl font-bold text-slate-800">Evoluciones Médicas</h2>
-        <p className="text-slate-500">Registro cronológico del progreso del paciente.</p>
-      </div>
-
-      {/* Buttons (Not Sticky) */}
-      <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-3 mb-8">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h2 className="text-3xl font-bold text-slate-800">Evoluciones Médicas</h2>
+            <p className="text-slate-500">Registro cronológico del progreso del paciente.</p>
+        </div>
+        <div className="flex space-x-3">
             <button 
                 onClick={handleOpenCreate}
                 className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg transition-colors shadow-sm"
@@ -145,7 +143,8 @@ export const Evolutions: React.FC<EvolutionsProps> = ({ evolutions, onAddEvoluti
                 <Sparkles size={18} />
                 <span>{loading ? 'Analizando...' : 'Resumen IA'}</span>
             </button>
-      </div>
+        </div>
+      </header>
 
       {summary && (
         <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-xl animate-fade-in relative">
